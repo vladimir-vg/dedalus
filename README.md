@@ -1,6 +1,6 @@
 # Offensively Crude Dedalus Implementation
 
-I created this prototype to learn Dedalus.
+I created this prototype to understand Dedalus.
 
 Dedalus is a Datalog for distributed programming. More information: https://www2.eecs.berkeley.edu/Pubs/TechRpts/2009/EECS-2009-173.html
 
@@ -20,6 +20,4 @@ Aggregation is straightforward: just do it before inserting facts back to the da
 
 # Things to remember
 
- * Each predicate in the body must have same location. Head may have different location. `#Location` might be specified as a first argument.
-
- * `fact(A,B)@N` conditions are allowed in async rules, `N` must be correctly matched.
+ * Each predicate in the body must have same location. Head may have different location. In that case `#Location` must be specified as a first argument.

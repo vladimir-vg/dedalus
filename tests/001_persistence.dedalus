@@ -1,0 +1,47 @@
+% this example was copied from the original Dedalus paper
+
+p_pos(A, B) <- p(A, B);
+p_pos(A, B)@next <- p_pos(A, B), not p_neg(A, B);
+
+p(1,2)@101;
+p(1,3)@102;
+p_neg(1,2)@300;
+
+
+
+% since we refer to timesteps inside rule body
+% we have to make test_passed and test_failed rules async.
+
+test_passed@async <-
+  % in paper p() rule was used to check presense of values,
+  % however it doesn't make sense. It seems like there is an error,
+  % it must be p_pos instead. Fixed here:
+  p_pos(1,2)@200,
+  p_pos(1,3)@200,
+  p_pos(1,3)@300,
+  p_pos(1,2)@301;
+
+test_failed <-
+  % p_pos(1,2) was inserted earlier than p_pos(1,3)
+  % and p_pos(1,2) was removed. Following should
+  % never happen:
+  p_pos(1,2),
+  not p_pos(1,3);
+
+
+
+% Initial implementation of test_failed:
+%
+% test_failed@async <-
+%   p_pos(1,3)@301;
+% 
+% According to Dedalus semantics, test_failed doesn't have to be true
+% even if p_pos(1,3)@301 is true. Async rules may or may not fire at any given tick.
+% Thus current rules implicitly assumes that test_failed will fire,
+% which is not guaranteed.
+%
+% I could store fact of failure once it eventually happens, and then check
+% if there is such a fact in test_passed. Still, it doesn't guarantee anything.
+% test_failed may not fire.
+%
+% The best would be to rewrite test_failed as a deductive rule, which I did.

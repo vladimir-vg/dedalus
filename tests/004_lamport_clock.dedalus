@@ -1,0 +1,15 @@
+% this example was copied from the original Dedalus paper
+
+% persist[p, p_neg, 2]
+p_pos(A, B) <- p(A, B);
+p_pos(A, B)@next <- p_pos(A, B), not p_neg(A, B);
+
+% "We gloss over one detail here: Lamport clocks rely upon a “tie-
+% breaking” function to ensure that no two events have the same
+% timestamp."
+
+p_wait(A, B, N)@async <- q(A, B)@N;
+p_wait(A, B, N)@next <- p_wait(A, B, N)@M, N >= M;
+p(A, B)@next <- p_wait(A, B, N)@M, N < M;
+
+test_passed;
