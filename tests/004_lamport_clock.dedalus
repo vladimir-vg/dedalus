@@ -7,6 +7,7 @@ p_pos(A, B)@next <- p_pos(A, B), not p_neg(A, B);
 % "We gloss over one detail here: Lamport clocks rely upon a “tie-
 % breaking” function to ensure that no two events have the same
 % timestamp."
+% Dedalus paper, page 10
 
 p_wait(A, B, N)@async <- q(A, B)@N;
 p_wait(A, B, N)@next <- p_wait(A, B, N)@M, N >= M;
