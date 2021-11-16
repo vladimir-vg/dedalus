@@ -1,3 +1,6 @@
+// TODO: add support for #Location syntax
+
+
 Top = items:ToplevelItem* {
 	// remove whitespace null values
 	return items.filter(function (x) { return x != null; });
@@ -8,7 +11,7 @@ ToplevelItem = ToSkip / Fact / Rule
 ToSkip
 	= (Comment / WhiteSpace)+ { return null; }
 
-Rule = RuleWithBody / RuleWithoutBody
+Rule "rule" = RuleWithBody / RuleWithoutBody
 RuleWithBody = head:RuleHead suffix: SuffixAndArrow ToSkip? body:RuleBody WhiteSpace? ";" {
 	return {
     	Rule: {
@@ -46,7 +49,7 @@ FactConditionWithoutArgsWithTime = name:Atom "@" time:NonNegNumValue {
 FactConditionWithoutArgsAndTime = name:Atom { return { name: name['Atom'], time: null, args: [] } }
 
 
-Fact = FactWithArgs / FactWithoutArgs
+Fact "fact" = FactWithArgs / FactWithoutArgs
 FactWithoutArgs
 	= name:Atom "@" time:NonNegInteger WhiteSpace? ";" {
     	return { Fact: { name: name['Atom'], args: [], time: time } }
@@ -70,21 +73,21 @@ ConstArguments
 
 Constant = Integer / String / Atom
 Integer = [-+]?[0-9]+ { return parseInt(text(), 10); }
-String = "\"" content:([^"]*) "\"" { return {String: content.join('') }; }
+String "string" = "\"" content:([^"]*) "\"" { return {String: content.join('') }; }
 NumValue = Integer / Variable
 NonNegNumValue = NonNegInteger / Variable
 
 NonNegInteger "integer"
 	= ([0-9]+) { return parseInt(text(), 10); }
 
-Atom = AtomAlphanumeric / AtomQuoted
+Atom "atom" = AtomAlphanumeric / AtomQuoted
 AtomAlphanumeric
 	= head:[a-z] tail:[a-zA-Z0-9_]* { return { Atom: (head + tail.join('')) }; }
 AtomQuoted
 	= "'" content:[^']+ "'" { return { Atom: content.join('') }; }
 
-Variable = head:[A-Z_] tail:[a-zA-Z0-9_]* { return { Variable: (head + tail.join('')) }; }
-Operator = ">=" / "=<" / ">" / "<" / "=/=" / "=" { return text(); }
+Variable "variable" = head:[A-Z_] tail:[a-zA-Z0-9_]* { return { Variable: (head + tail.join('')) }; }
+Operator "binary operator" = ">=" / "=<" / ">" / "<" / "=/=" / "=" { return text(); }
 
 AggregatedVariable = func:Atom "<" name:Variable ">" {
 	return { AggregatedVariable: { name: name['Variable'], func: func['Atom'] } };
