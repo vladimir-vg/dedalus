@@ -1,6 +1,3 @@
-// TODO: add support for #Location syntax
-
-
 Top = items:ToplevelItem* {
 	// remove whitespace null values
 	return items.filter(function (x) { return x != null; });
@@ -16,7 +13,8 @@ RuleWithBody = head:RuleHead suffix: SuffixAndArrow ToSkip? body:RuleBody WhiteS
 	return {
     	Rule: {
     		name: head['name'], args: head['args'],
-            body: body, suffix: suffix
+            body: body, suffix: suffix,
+            line: location().start.line
     	}
     };
 }
@@ -25,60 +23,95 @@ SuffixAndArrow
     / suffix:"@async" WhiteSpace? "<-" { return suffix; }
     / WhiteSpace? "<-" { return null; }
 RuleWithoutBody = head:RuleHead ";" {
-	return { Rule: { name: head['name'], args: head['args'], body: [], suffix: null } };
+	return {
+    	Rule: {
+    		name: head['name'], args: head['args'], body: [], suffix: null,
+            line: location().start.line
+    	}
+    };
 }
 RuleHead = RuleHeadWithArgs / RuleHeadWithoutArgs
 RuleHeadWithoutArgs = name:Atom { return { name: name['Atom'], args: [] } }
-RuleHeadWithArgs = name:Atom "(" WhiteSpace? args:Arguments WhiteSpace? ")" {
+RuleHeadWithArgs = name:Atom "(" WhiteSpace? args:HeadArguments WhiteSpace? ")" {
 	return { name: name['Atom'], args: args };
 }
 RuleBody
 	= cond:RuleCondition WhiteSpace? "," ToSkip? rest:RuleBody { return [cond].concat(rest); }
 	/ cond:RuleCondition { return [cond]; }
-RuleCondition = FactCondition / OperatorCondition
+RuleCondition = ChooseCondition / FactCondition / OperatorCondition
 
-OperatorCondition = left:NumValue WhiteSpace? op:Operator WhiteSpace? right:NumValue {
-	return {OperatorCondition: {left: left, op: op, right: right}};
+ChooseCondition
+	= "choose(" WhiteSpace? "(" keyvars:VarList ")" WhiteSpace? ","
+      WhiteSpace? "(" rowvars:VarList ")" WhiteSpace? ")" {
+      	const line = location().start.line;
+      	return { ChooseCondition: { keyvars: keyvars, rowvars: rowvars, line: line } };
+      }
+VarList = var1:VariableWithoutLocPrefix WhiteSpace? "," WhiteSpace? rest:VarList {
+			return [var1].concat(rest);
+		  }
+		/ var1:VariableWithoutLocPrefix { return [var1]; }
+
+OperatorCondition = left:IntegerValue WhiteSpace? op:Operator WhiteSpace? right:IntegerValue {
+	const line = location().start.line;
+    return { OperatorCondition: {left: left, op: op, right: right, line: line} };
 }
-// FactConditionWithArgs /
-FactCondition = FactConditionWithoutArgs
-FactConditionWithoutArgs = FactConditionWithoutArgsWithTime / FactConditionWithoutArgsAndTime
-FactConditionWithoutArgsWithTime = name:Atom "@" time:NonNegNumValue {
-	return { name: name['Atom'], time: time, args: [] };
-}
-FactConditionWithoutArgsAndTime = name:Atom { return { name: name['Atom'], time: null, args: [] } }
+
+FactCondition
+	= "notin" WhiteSpace fact:FactCondition1 {
+    	const line = location().start.line;
+    	return Object.assign({}, fact, { negated: true, line: line });
+    }
+    / fact:FactCondition1 {
+    	const line = location().start.line;
+    	return Object.assign({}, fact, { negated: false, line: line });
+    }
+FactCondition1
+	= name:Atom "(" args:BodyArguments ")" "@" time:IntegerValue {
+    	return { FactCondition: { name: name, args: args, time: time } };
+    }
+    / name:Atom "(" args:BodyArguments ")" {
+    	return { FactCondition: { name: name, args: args, time: null } };
+    }
+    / name:Atom "@" time:IntegerValue {
+    	return { FactCondition: { name: name, args: [], time: time } };
+    }
+    / name:Atom {
+    	return { FactCondition: { name: name, args: [], time: null } };
+    }
 
 
 Fact "fact" = FactWithArgs / FactWithoutArgs
 FactWithoutArgs
-	= name:Atom "@" time:NonNegInteger WhiteSpace? ";" {
-    	return { Fact: { name: name['Atom'], args: [], time: time } }
+	= name:Atom "@" time:Integer WhiteSpace? ";" {
+    	return { Fact: { name: name['Atom'], args: [], time: time, line: location().start.line } }
     }
 FactWithArgs
 	= name:Atom "("  WhiteSpace? args:ConstArguments WhiteSpace? ")"
-      "@" time:NonNegInteger WhiteSpace? ";" {
+      "@" time:Integer WhiteSpace? ";" {
       	const args1 = args.filter(function (x) { return x != null; });
-    	return { Fact: {name: name['Atom'], args: args1, time: time } };
+    	return { Fact: {name: name['Atom'], args: args1, time: time, line: location().start.line } };
     }
 
-Arguments
-	= arg:Argument WhiteSpace? "," WhiteSpace? rest:Arguments { return [arg].concat(rest); }
-    / arg:Argument { return [arg]; }
-Argument
+HeadArguments
+	= arg:HeadArgument WhiteSpace? "," WhiteSpace? rest:HeadArguments { return [arg].concat(rest); }
+    / arg:HeadArgument { return [arg]; }
+HeadArgument
 	= AggregatedVariable / Constant / Variable
+
+BodyArguments
+	= arg:BodyArgument WhiteSpace? "," WhiteSpace? rest:BodyArguments { return [arg].concat(rest); }
+    / arg:BodyArgument { return [arg]; }
+BodyArgument
+	= Constant / Variable
 
 ConstArguments
 	= arg:Constant WhiteSpace? "," WhiteSpace? rest:ConstArguments { return [arg].concat(rest); }
     / arg:Constant { return [arg]; }
-
 Constant = Integer / String / Atom
+
 Integer = [-+]?[0-9]+ { return parseInt(text(), 10); }
 String "string" = "\"" content:([^"]*) "\"" { return {String: content.join('') }; }
-NumValue = Integer / Variable
-NonNegNumValue = NonNegInteger / Variable
-
-NonNegInteger "integer"
-	= ([0-9]+) { return parseInt(text(), 10); }
+IntegerValue = Integer / VariableWithoutLocPrefix
 
 Atom "atom" = AtomAlphanumeric / AtomQuoted
 AtomAlphanumeric
@@ -86,7 +119,12 @@ AtomAlphanumeric
 AtomQuoted
 	= "'" content:[^']+ "'" { return { Atom: content.join('') }; }
 
-Variable "variable" = head:[A-Z_] tail:[a-zA-Z0-9_]* { return { Variable: (head + tail.join('')) }; }
+Variable "variable" = loc:"#"? head:[A-Z_] tail:[a-zA-Z0-9_]* {
+	return { Variable: { name: (head + tail.join('')), location: !!loc } };
+}
+VariableWithoutLocPrefix "variable" = head:[A-Z_] tail:[a-zA-Z0-9_]* {
+	return { Variable: { name: (head + tail.join('')), location: false } };
+}
 Operator "binary operator" = ">=" / "=<" / ">" / "<" / "=/=" / "=" { return text(); }
 
 AggregatedVariable = func:Atom "<" name:Variable ">" {
@@ -100,7 +138,7 @@ WhiteSpace "whitespace" = WhiteSpaceChar+ { return null; }
 WhiteSpaceChar = "\t" / "\v" / "\f" / " " / LineTerminator
 Comment "comment" = MultiLineComment / SingleLineComment
 MultiLineComment = "/*" (!"*/" SourceCharacter)* "*/"
-SingleLineComment = "%" (!LineTerminator SourceCharacter)*
+SingleLineComment = ("//" / "%") (!LineTerminator SourceCharacter)*
 
 LineTerminator = [\n\r]
 
