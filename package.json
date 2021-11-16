@@ -1,0 +1,27 @@
+{
+  "name": "crude-dedalus",
+  "version": "1.0.0",
+  "description": "I created this prototype to learn Dedalus. Solution is naive: store everything in PostgreSQL, use stored procedures for computing next ticks. Super slow and super transparent.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "bin": {
+    "dedalus": "bin/dedalus.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vladimir-vg/crude-dedalus.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/vladimir-vg/crude-dedalus/issues"
+  },
+  "homepage": "https://github.com/vladimir-vg/crude-dedalus#readme",
+  "dependencies": {
+    "commander": "^8.3.0",
+    "peggy": "^1.2.0"
+  }
+}

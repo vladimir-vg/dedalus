@@ -1,0 +1,40 @@
+% In this file gonna check that given ast is correct.
+% Rules that indicate error have prefix err_.
+% This way we can select and specifically query these rules
+% to check if ast is correct.
+
+
+
+% location prefix for variables
+err_different_location_vars_in_rule_head
+err_different_location_vars_in_rule_body
+err_same_location_vars_in_rule_and_body
+err_location_vars_only_in_rule_head
+err_location_vars_only_in_rule_body
+err_location_not_in_async_rule
+
+% timestamps
+err_different_time_suffix_in_body
+err_time_suffix_not_in_async_rule
+
+% negation
+err_var_in_negation_not_present_in_positive
+
+
+
+% we need to transform rules with choose rules
+% need to generate new ids for helper rules
+% how to do it in Dedalus?
+%
+% At first I thought about introducing concat<Name> aggregation function
+% but it implies order, which we don't have
+%
+% Another idea: use some kind of random_string() facts
+% and choose from deterministically. But I can't do that,
+% since I don't have choose rule yet, I am trying to implement it.
+%
+% Okay, I can do everything, but selecting new name.
+% Let system outside compose everything.
+%
+% Hm. I could send requests/events to outside node (stdlib)
+% to concat strings for me. Yeah, looks complicated.
