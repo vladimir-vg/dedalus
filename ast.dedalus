@@ -1,0 +1,48 @@
+% format of the facts that will describe Dedalus source
+% that later will be used to correctness check, type inference
+% and transformation.
+%
+% It is not really AST, right? Let's call it Abstract Syntax Tables :)
+
+
+
+fact(Filename, Line, Name, FactId, Timestamp)
+fact_int_arg(FactId, N, Value)
+fact_str_arg(FactId, N, Value)
+
+% ClauseId -- any id to refer to the clauses for same rule
+% Suffix -- next, async or none
+clause(Filename, Line, Name, ClauseId, Suffix)
+% ArgN -- position in the head
+% AggFunc -- min, max, count or none
+% LocationPrefix -- true/false. #Location
+% head arg is identified uniquely by ClauseId-RuleN pair
+clause_var_arg(ClauseId, ArgN, VarName, AggFunc, LocationPrefix)
+clause_int_arg(ClauseId, ArgN, Value)
+clause_str_arg(ClauseId, ArgN, Value)
+clause_atom_arg(ClauseId, ArgN, Value)
+
+% Negated -- true/false
+% RuleN -- position in the body, number of the rule
+% body rule is identified uniquely by ClauseId-RuleN pair
+body_rule(Filename, Line, Name, ClauseId, RuleN, Negated)
+
+% Op == '<', '>', '>=', ...
+% expected to have two arg facts with ArgN=1 and ArgN=2
+body_binop(ClauseId, RuleN, Op)
+
+body_fact(ClauseId, RuleN, Name)
+% if body rule has explicit time variable
+body_fact_var_time(ClauseId, RuleN, VarName)
+% if it is a constant
+body_fact_int_time(ClauseId, RuleN, VarName)
+
+body_choose(ClauseId, RuleN)
+body_choose_key_var(ClauseId, RuleN, ArgN, VarName)
+body_choose_row_var(ClauseId, RuleN, ArgN, VarName)
+
+% information about arg used in body rule
+% LocationPrefix = true/false
+body_var_arg(ClauseId, RuleN, ArgN, VarName, LocationPrefix)
+body_int_arg(ClauseId, RuleN, ArgN, Value)
+body_str_arg(ClauseId, RuleN, ArgN, Value)

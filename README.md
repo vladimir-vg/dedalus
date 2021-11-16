@@ -32,4 +32,3 @@ Non-deterministic `choose` rule can be expressed in terms of negation and recurs
  3. [ ] Pretty printer for Dedalus AST
  4. [ ] Testing system
 
-
