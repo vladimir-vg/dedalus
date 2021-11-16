@@ -3,6 +3,8 @@ import path from 'path';
 import fs from 'fs/promises';
 import peg from 'peggy';
 
+import { tree2tables } from './ast.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -13,7 +15,7 @@ const runFile = async (path) => {
   const dedalusText = await fs.readFile(path);
   const parser = peg.generate(String(grammarText));
   const tree = parser.parse(String(dedalusText));
-  console.log(tree);
+  console.log(tree2tables(tree, 'filename1').toJS(), path);
 };
 
 export {

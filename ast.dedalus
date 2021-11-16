@@ -6,9 +6,10 @@
 
 
 
-fact(Filename, Line, Name, FactId, Timestamp)
-fact_int_arg(FactId, N, Value)
-fact_str_arg(FactId, N, Value)
+fact(Filename, Line, Name, FactN, Timestamp)
+fact_int_arg(FactN, N, Value)
+fact_atom_arg(FactN, N, Value)
+fact_str_arg(FactN, N, Value)
 
 % ClauseId -- any id to refer to the clauses for same rule
 % Suffix -- next, async or none
@@ -25,24 +26,25 @@ clause_atom_arg(ClauseId, ArgN, Value)
 % Negated -- true/false
 % RuleN -- position in the body, number of the rule
 % body rule is identified uniquely by ClauseId-RuleN pair
-body_rule(Filename, Line, Name, ClauseId, RuleN, Negated)
+body_rule(Filename, Line, Name, ClauseN, RuleN, Negated)
 
 % Op == '<', '>', '>=', ...
 % expected to have two arg facts with ArgN=1 and ArgN=2
-body_binop(ClauseId, RuleN, Op)
+body_binop(ClauseN, RuleN, Op)
 
-body_fact(ClauseId, RuleN, Name)
+body_fact(ClauseN, RuleN, Name)
 % if body rule has explicit time variable
-body_fact_var_time(ClauseId, RuleN, VarName)
+body_fact_var_time(ClauseN, RuleN, VarName)
 % if it is a constant
-body_fact_int_time(ClauseId, RuleN, VarName)
+body_fact_int_time(ClauseN, RuleN, VarName)
 
-body_choose(ClauseId, RuleN)
-body_choose_key_var(ClauseId, RuleN, ArgN, VarName)
-body_choose_row_var(ClauseId, RuleN, ArgN, VarName)
+body_choose(ClauseN, RuleN)
+body_choose_key_var(ClauseN, RuleN, ArgN, VarName)
+body_choose_row_var(ClauseN, RuleN, ArgN, VarName)
 
 % information about arg used in body rule
 % LocationPrefix = true/false
-body_var_arg(ClauseId, RuleN, ArgN, VarName, LocationPrefix)
-body_int_arg(ClauseId, RuleN, ArgN, Value)
-body_str_arg(ClauseId, RuleN, ArgN, Value)
+body_var_arg(ClauseN, RuleN, ArgN, VarName, LocationPrefix)
+body_int_arg(ClauseN, RuleN, ArgN, Value)
+body_atom_arg(ClauseN, RuleN, ArgN, Value)
+body_str_arg(ClauseN, RuleN, ArgN, Value)
