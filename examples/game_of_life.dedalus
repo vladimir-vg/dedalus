@@ -1,0 +1,62 @@
+% classic glider:
+%                  Y
+%
+% -  -  -  -  -    2
+% -  -  #  -  -    1
+% -  -  -  #  -    0
+% -  #  #  #  -   -1 
+% -  -  -  -  -   -2
+%
+% X -1  0  1  2
+% cell(X, Y)@T
+alive(-1, -1)@0;
+alive(0, -1)@0;
+alive(1, -1)@0;
+alive(1, 0)@0;
+alive(0, 1)@0;
+
+% some values to denote locations that can be sent to and received from.
+% we assumer that there would be someone at address 'visualizer1'
+% to receive information and display it
+location(visualizer, visualizer1)@0;
+location(Role, Value)@next <- location(Role, Value); % persist locations values
+
+
+
+adjacent(X1, Y1, X2, Y2, top) <-          X2 = X1,           successor(Y1, Y2);
+adjacent(X1, Y1, X2, Y2, top_right) <-    successor(X1, X2), successor(Y1, Y2);
+adjacent(X1, Y1, X2, Y2, right) <-        successor(X1, X2), Y2 = Y1;
+adjacent(X1, Y1, X2, Y2, bottom_right) <- successor(X1, X2), successor(Y2, Y1);
+adjacent(X1, Y1, X2, Y2, bottom) <-       X2 = X1,           successor(Y2, Y1);
+adjacent(X1, Y1, X2, Y2, bottom_left) <-  successor(X2, X1), successor(Y2, Y1);
+adjacent(X1, Y1, X2, Y2, left) <-         successor(X2, X1), Y2 = Y1;
+adjacent(X1, Y1, X2, Y2, top_left) <-     successor(X2, X1), successor(Y1, Y2);
+
+neighbours_count(X, Y, count<Direction>) <-
+  adjacent_cell(X, Y, X1, Y1, Direction),
+  alive(X1, Y1);
+
+% We consider only dead cells around alive cells
+% since only they can become populated.
+%
+% Also because there is infinite number of them,
+% and we can't work with infinite number of facts
+dead(X1, Y1) <-
+  alive(X, Y),
+  adjacent(X, Y, X1, Y1, _Direction),
+  notin alive(X1, Y1);
+
+% cell stays alive only if has exactly 2 or 3 neighbours
+% everything else is underpopulated or overpopulated
+alive(X, Y)@next <- neighbours_count(X, Y, 2);
+alive(X, Y)@next <- neighbours_count(X, Y, 3);
+
+% if empty cell has exactly three neighbours -- turns alive
+alive(X, Y)@next <- dead(X, Y), neighbours_count(X, Y, 3);
+
+
+
+% output for someone outside who can draw
+pixel(#Receiver, X, Y, T)@async <-
+  location(visualizer, Receiver),
+  alive(X, Y)@T;
