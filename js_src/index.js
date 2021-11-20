@@ -15,8 +15,10 @@ const runFile = async (path) => {
   const dedalusText = await fs.readFile(path);
   const parser = peg.generate(String(grammarText));
   const tree = parser.parse(String(dedalusText));
-  console.log(tree2tables(tree, 'filename1').toJS(), path);
+  console.log(tree2tables(tree, path).toJS());
 };
+
+
 
 export {
   runFile

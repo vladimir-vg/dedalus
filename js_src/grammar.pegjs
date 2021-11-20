@@ -59,11 +59,15 @@ OperatorCondition = left:IntegerValue WhiteSpace? op:Operator WhiteSpace? right:
 FactCondition
 	= "notin" WhiteSpace fact:FactCondition1 {
     	const line = location().start.line;
-    	return Object.assign({}, fact, { negated: true, line: line });
+    	return {
+        FactCondition: { ...fact['FactCondition'], negated: true, line: line }
+      };
     }
     / fact:FactCondition1 {
     	const line = location().start.line;
-    	return Object.assign({}, fact, { negated: false, line: line });
+    	return {
+        FactCondition: { ...fact['FactCondition'], negated: false, line: line }
+      };
     }
 FactCondition1
 	= name:Atom "(" args:BodyArguments ")" "@" time:IntegerValue {
@@ -128,7 +132,7 @@ VariableWithoutLocPrefix "variable" = head:[A-Z_] tail:[a-zA-Z0-9_]* {
 Operator "binary operator" = ">=" / "=<" / ">" / "<" / "=/=" / "=" { return text(); }
 
 AggregatedVariable = func:Atom "<" name:Variable ">" {
-	return { AggregatedVariable: { name: name['Variable'], func: func['Atom'] } };
+	return { Variable: { name: name['Variable'], afunc: func['Atom'], location: false } };
 }
 
 
