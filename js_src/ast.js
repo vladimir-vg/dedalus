@@ -41,12 +41,12 @@ const transformFact = (tables, item, factN, filename) => {
   });
 
   return tables.mergeDeep({
-    'fact/5': [
+    'ast_fact/5': [
       [filename, line, name, factN, time]
     ],
-    'fact_int_arg/3': intArgs,
-    'fact_sym_arg/3': symArgs,
-    'fact_str_arg/3': strArgs,
+    'ast_fact_int_arg/3': intArgs,
+    'ast_fact_sym_arg/3': symArgs,
+    'ast_fact_str_arg/3': strArgs,
   });
 };
 
@@ -83,18 +83,18 @@ const transformFactCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
   });
 
   return tables.mergeDeep({
-    'body_rule/4': [
+    'ast_body_rule/4': [
       [filename, line, clauseN, ruleN]
     ],
-    'body_fact/4': [
+    'ast_body_fact/4': [
       [clauseN, ruleN, argToSymbol(name), boolToSymbol(negated)]
     ],
-    'body_fact_var_time/3': varTime,
-    'body_fact_int_time/3': intTime,
-    'body_var_arg/5': varArgs,
-    'body_int_arg/4': intArgs,
-    'body_sym_arg/4': symArgs,
-    'body_str_arg/4': strArgs,
+    'ast_body_fact_var_time/3': varTime,
+    'ast_body_fact_int_time/3': intTime,
+    'ast_body_var_arg/5': varArgs,
+    'ast_body_int_arg/4': intArgs,
+    'ast_body_sym_arg/4': symArgs,
+    'ast_body_str_arg/4': strArgs,
   });
 };
 
@@ -119,14 +119,14 @@ const transformOperatorCondition = (tables, bodyRule, clauseN, ruleN, filename) 
   });
 
   return tables.mergeDeep({
-    'body_rule/4': [
+    'ast_body_rule/4': [
       [filename, line, clauseN, ruleN]
     ],
-    'body_binop/3': [
+    'ast_body_binop/3': [
       [clauseN, ruleN, {symbol: op}]
     ],
-    'body_var_arg/5': varArgs,
-    'body_int_arg/4': intArgs,
+    'ast_body_var_arg/5': varArgs,
+    'ast_body_int_arg/4': intArgs,
   });
 };
 
@@ -140,12 +140,12 @@ const transformChooseCondition = (tables, bodyRule, clauseN, ruleN, filename) =>
   const rowVars = rowvars.map(varToTuple);
 
   return tables.mergeDeep({
-    'body_rule/6': [
+    'ast_body_rule/6': [
       [filename, line, clauseN, ruleN]
     ],
-    'body_choose/2': [[clauseN, ruleN]],
-    'body_choose_key_var/4': keyVars,
-    'body_choose_row_var/4': rowVars,
+    'ast_body_choose/2': [[clauseN, ruleN]],
+    'ast_body_choose_key_var/4': keyVars,
+    'ast_body_choose_row_var/4': rowVars,
   });
 };
 
@@ -196,13 +196,13 @@ const transformRule = (tables, item, clauseN, filename) => {
 
   const suffix1 = suffix ?? {Atom: 'none'};
   return tables1.mergeDeep({
-    'clause/5': [
+    'ast_clause/5': [
       [filename, line, name, clauseN, suffix1]
     ],
-    'clause_var_arg/5': varArgs,
-    'clause_int_arg/3': intArgs,
-    'clause_str_arg/3': strArgs,
-    'clause_sym_arg/3': symArgs,
+    'ast_clause_var_arg/5': varArgs,
+    'ast_clause_int_arg/3': intArgs,
+    'ast_clause_str_arg/3': strArgs,
+    'ast_clause_sym_arg/3': symArgs,
   });
 };
 

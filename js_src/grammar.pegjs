@@ -57,7 +57,7 @@ OperatorCondition = left:IntegerValue WhiteSpace? op:Operator WhiteSpace? right:
 }
 
 FactCondition
-	= "notin" WhiteSpace fact:FactCondition1 {
+	= "not" WhiteSpace fact:FactCondition1 {
     	const line = location().start.line;
     	return {
         FactCondition: { ...fact['FactCondition'], negated: true, line: line }

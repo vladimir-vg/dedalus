@@ -16,7 +16,7 @@ Non-deterministic `choose` rule can be expressed in terms of negation and recurs
 
  * Only in `@async` rules some variables may be marked with location prefix: `#Location`. In that case, all rules in the body must use same `#Location` variable in their body.
 
- * All variables in the head must appear in non-negated rules in the body.
+ * All variables in the head must appear in positive rules in the body.
 
  * If we have negation in the body, then all variables used in negated rule must appear in positive rules of the same body.
 
@@ -26,9 +26,10 @@ Non-deterministic `choose` rule can be expressed in terms of negation and recurs
 
 # TODO
 
- 0. [ ] PEGJS parser that takes in source file and spits out collection of JS arrays that represent AST (with line numbers)
+ 0. [x] PEGJS parser that takes in source file and spits out collection of JS arrays that represent AST (with line numbers)
  1. [ ] Dedalus code that deducts whether given AST is correct Dedalus program. Should produce error facts with descriptions and line numbers.
  2. [ ] Dedalus code that would transform rules with choose rule to equivalent that rely on presence of asserted choice fact.
  3. [ ] Pretty printer for Dedalus AST
- 4. [ ] Testing system
+ 4. [ ] Parser tests via input source code and output AST facts
+ 5. [ ] Testing system
 

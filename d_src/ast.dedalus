@@ -10,48 +10,48 @@
 %
 % It is not really AST, right? Let's call it Abstract Syntax Tables :)
 %
-% fact(Filename, Line, Name, FactN, Timestamp)
-% fact_int_arg(FactN, N, Value)
-% fact_sym_arg(FactN, N, Value)
-% fact_str_arg(FactN, N, Value)
+% ast_fact(Filename, Line, Name, FactN, Timestamp)
+% ast_fact_int_arg(FactN, N, Value)
+% ast_fact_sym_arg(FactN, N, Value)
+% ast_fact_str_arg(FactN, N, Value)
 
 % % ClauseN -- number of clause in the file
 % % Suffix -- next, async or none
-% clause(Filename, Line, Name, ClauseN, Suffix)
+% ast_clause(Filename, Line, Name, ClauseN, Suffix)
 % % ArgN -- position in the head
 % % AggFunc -- min, max, count or none
 % % LocPrefix -- true/false. #Location
 % % head arg is identified uniquely by ClauseN-RuleN pair
-% clause_var_arg(ClauseN, ArgN, VarName, AggFunc, LocPrefix)
-% clause_int_arg(ClauseN, ArgN, Value)
-% clause_str_arg(ClauseN, ArgN, Value)
-% clause_sym_arg(ClauseN, ArgN, Value)
+% ast_clause_var_arg(ClauseN, ArgN, VarName, AggFunc, LocPrefix)
+% ast_clause_int_arg(ClauseN, ArgN, Value)
+% ast_clause_str_arg(ClauseN, ArgN, Value)
+% ast_clause_sym_arg(ClauseN, ArgN, Value)
 
 % % Negated -- true/false
 % % RuleN -- position in the body, number of the rule
 % % body rule is identified uniquely by ClauseN-RuleN pair
-% body_rule(Filename, Line, ClauseN, RuleN)
+% ast_body_rule(Filename, Line, ClauseN, RuleN)
 
 % % Op == '<', '>', '>=', ...
 % % expected to have two arg facts with ArgN=1 and ArgN=2
-% body_binop(ClauseN, RuleN, Op)
+% ast_body_binop(ClauseN, RuleN, Op)
 
-% body_fact(ClauseN, RuleN, Name, Negated)
+% ast_body_fact(ClauseN, RuleN, Name, Negated)
 % % if body rule has explicit time variable
-% body_fact_var_time(ClauseN, RuleN, VarName)
+% ast_body_fact_var_time(ClauseN, RuleN, VarName)
 % % if it is a constant
-% body_fact_int_time(ClauseN, RuleN, Value)
+% ast_body_fact_int_time(ClauseN, RuleN, Value)
 
-% body_choose(ClauseN, RuleN)
-% body_choose_key_var(ClauseN, RuleN, ArgN, VarName)
-% body_choose_row_var(ClauseN, RuleN, ArgN, VarName)
+% ast_body_choose(ClauseN, RuleN)
+% ast_body_choose_key_var(ClauseN, RuleN, ArgN, VarName)
+% ast_body_choose_row_var(ClauseN, RuleN, ArgN, VarName)
 
 % % information about arg used in body rule
 % % LocPrefix = true/false
-% body_var_arg(ClauseN, RuleN, ArgN, VarName, LocPrefix)
-% body_int_arg(ClauseN, RuleN, ArgN, Value)
-% body_sym_arg(ClauseN, RuleN, ArgN, Value)
-% body_str_arg(ClauseN, RuleN, ArgN, Value)
+% ast_body_var_arg(ClauseN, RuleN, ArgN, VarName, LocPrefix)
+% ast_body_int_arg(ClauseN, RuleN, ArgN, Value)
+% ast_body_sym_arg(ClauseN, RuleN, ArgN, Value)
+% ast_body_str_arg(ClauseN, RuleN, ArgN, Value)
 
 
 
@@ -120,14 +120,14 @@ range_restricted_clause(ClauseN) <-
 % if we have several arities for same name
 % this would produce several facts
 clause_arity(Name, ClauseN, count<ArgN>) <-
-  clause(_Filename, _Line, Name, ClauseN, _Suffix),
-  clause_arg_number(ClauseN, ArgN);
+  ast_clause(_Filename, _Line, Name, ClauseN, _Suffix),
+  ast_clause_arg_number(ClauseN, ArgN);
 
 clause_arg_number(ClauseN, ArgN) <-
-  clause_var_arg(ClauseN, ArgN, _VName, _AFunc, _LPrefix);
-clause_arg_number(ClauseN, ArgN) <- clause_int_arg(ClauseN, ArgN, _Value);
-clause_arg_number(ClauseN, ArgN) <- clause_str_arg(ClauseN, ArgN, _Value);
-clause_arg_number(ClauseN, ArgN) <- clause_sym_arg(ClauseN, ArgN, _Value);
+  ast_clause_var_arg(ClauseN, ArgN, _VName, _AFunc, _LPrefix);
+clause_arg_number(ClauseN, ArgN) <- ast_clause_int_arg(ClauseN, ArgN, _Value);
+clause_arg_number(ClauseN, ArgN) <- ast_clause_str_arg(ClauseN, ArgN, _Value);
+clause_arg_number(ClauseN, ArgN) <- ast_clause_sym_arg(ClauseN, ArgN, _Value);
 
 
 % % location prefix for variables
@@ -158,10 +158,10 @@ clause_arg_number(ClauseN, ArgN) <- clause_sym_arg(ClauseN, ArgN, _Value);
 %
 % So, here is the rule to detect 3rd case:
 err_location_var_in_body_but_not_in_head(Filename, Line1, Line2) <-
-  clause(Filename, Line1, _Name, ClauseN, '@async'),
-  body_rule(Filename, Line2, ClauseN, RuleN),
+  ast_clause(Filename, Line1, _Name, ClauseN, '@async'),
+  ast_body_rule(Filename, Line2, ClauseN, RuleN),
   % okay, so there exist a variable with location prefix in body
-  body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
+  ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
   LocPrefix = true,
  
   % all variables in negated rule must appear in positive rule
@@ -169,7 +169,7 @@ err_location_var_in_body_but_not_in_head(Filename, Line1, Line2) <-
   not exist_var_in_head_with_location_prefix(ClauseN);
 
 exist_var_in_head_with_location_prefix(ClauseN) <-
-  clause_var_arg(ClauseN, _ArgN, _VarName, _AggFunc, LocPrefix),
+  ast_clause_var_arg(ClauseN, _ArgN, _VarName, _AggFunc, LocPrefix),
   LocPrefix = true;
 
 
@@ -178,49 +178,49 @@ exist_var_in_head_with_location_prefix(ClauseN) <-
 % only make sense in @async rules. They denote from where to where
 % event tuple should be delivered
 err_location_not_in_async_rule(Filename, Line, ClauseN) <-
-  clause(Filename, _Line, _Name, ClauseN, Suffix),
+  ast_clause(Filename, _Line, _Name, ClauseN, Suffix),
   Suffix =/= '@async',
-  body_rule(Filename, Line, ClauseN, RuleN),
-  body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
+  ast_body_rule(Filename, Line, ClauseN, RuleN),
+  ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
   LocPrefix = true;
 
 
 
 % timestamps
 err_different_time_suffix_in_body(Filename, Line1, Line2) <-
-  body_rule(Filename, Line1, ClauseN, RuleN1),
-  body_rule(Filename, Line2, ClauseN, RuleN2),
-  body_fact_var_time(ClauseN, RuleN1, VarName1),
-  body_fact_var_time(ClauseN, RuleN2, VarName2),
+  ast_body_rule(Filename, Line1, ClauseN, RuleN1),
+  ast_body_rule(Filename, Line2, ClauseN, RuleN2),
+  ast_body_fact_var_time(ClauseN, RuleN1, VarName1),
+  ast_body_fact_var_time(ClauseN, RuleN2, VarName2),
   VarName1 =/= VarName2;
 
 
 
 err_time_suffix_not_in_async_rule(Filename, Line) <-
-  clause(Filename, _Line, _Name, ClauseN, Suffix),
+  ast_clause(Filename, _Line, _Name, ClauseN, Suffix),
   Suffix =/= '@async',
-  body_rule(Filename, Line, ClauseN, RuleN),
-  body_fact_has_time_suffix(ClauseN, RuleN);
+  ast_body_rule(Filename, Line, ClauseN, RuleN),
+  ast_body_fact_has_time_suffix(ClauseN, RuleN);
 
 body_fact_has_time_suffix(ClauseN, RuleN) <-
-  body_fact_var_time(ClauseN, RuleN, _VarName);
+  ast_body_fact_var_time(ClauseN, RuleN, _VarName);
 body_fact_has_time_suffix(ClauseN, RuleN) <-
-  body_fact_int_time(ClauseN, RuleN, _Value);
+  ast_body_fact_int_time(ClauseN, RuleN, _Value);
 
 
 
 % negation
 err_var_in_negation_not_present_in_positive(Filename, Line) <-
-  body_rule(Filename, Line, ClauseN, RuleN),
-  body_fact(ClauseN, RuleN, _Name, Negated),
+  ast_body_rule(Filename, Line, ClauseN, RuleN),
+  ast_body_fact(ClauseN, RuleN, _Name, Negated),
   Negated = true,
-  body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix),
+  ast_body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix),
   not var_present_in_positive_rule(ClauseN, VarName);
 
 var_present_in_positive_rule(ClauseN, VarName) <-
-  body_fact(ClauseN, RuleN, _Name, Negated),
+  ast_body_fact(ClauseN, RuleN, _Name, Negated),
   Negated = false,
-  body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix);
+  ast_body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix);
 
 
 
