@@ -23,36 +23,46 @@ location(Role, Value)@next <- location(Role, Value); % persist locations values
 
 
 
-adjacent(X1, Y1, X2, Y2, top) <-          X2 = X1,           successor(Y1, Y2);
-adjacent(X1, Y1, X2, Y2, top_right) <-    successor(X1, X2), successor(Y1, Y2);
-adjacent(X1, Y1, X2, Y2, right) <-        successor(X1, X2), Y2 = Y1;
-adjacent(X1, Y1, X2, Y2, bottom_right) <- successor(X1, X2), successor(Y2, Y1);
-adjacent(X1, Y1, X2, Y2, bottom) <-       X2 = X1,           successor(Y2, Y1);
-adjacent(X1, Y1, X2, Y2, bottom_left) <-  successor(X2, X1), successor(Y2, Y1);
-adjacent(X1, Y1, X2, Y2, left) <-         successor(X2, X1), Y2 = Y1;
-adjacent(X1, Y1, X2, Y2, top_left) <-     successor(X2, X1), successor(Y1, Y2);
+alive_adjacent(X1, Y1, X2, Y2, top) <-
+  alive(X1, Y1), X2 = X1, successor(Y1, Y2);
+alive_adjacent(X1, Y1, X2, Y2, top_right) <-
+  alive(X1, Y1), successor(X1, X2), successor(Y1, Y2);
+alive_adjacent(X1, Y1, X2, Y2, right) <-
+  alive(X1, Y1), successor(X1, X2), Y2 = Y1;
+alive_adjacent(X1, Y1, X2, Y2, bottom_right) <-
+  alive(X1, Y1), successor(X1, X2), successor(Y2, Y1);
+alive_adjacent(X1, Y1, X2, Y2, bottom) <-
+  alive(X1, Y1), X2 = X1, successor(Y2, Y1);
+alive_adjacent(X1, Y1, X2, Y2, bottom_left) <-
+  alive(X1, Y1), successor(X2, X1), successor(Y2, Y1);
+alive_adjacent(X1, Y1, X2, Y2, left) <-
+  alive(X1, Y1), successor(X2, X1), Y2 = Y1;
+alive_adjacent(X1, Y1, X2, Y2, top_left) <-
+  alive(X1, Y1), successor(X2, X1), successor(Y1, Y2);
 
-neighbours_count(X, Y, count<Direction>) <-
-  adjacent_cell(X, Y, X1, Y1, Direction),
-  alive(X1, Y1);
 
 % We consider only dead cells around alive cells
 % since only they can become populated.
 %
-% Also because there is infinite number of them,
+% Also because there is infinite number of empty cells,
 % and we can't work with infinite number of facts
 dead(X1, Y1) <-
-  alive(X, Y),
-  adjacent(X, Y, X1, Y1, _Direction),
-  notin alive(X1, Y1);
+  not alive(X, Y),
+  alive_adjacent(_X1, _Y1, X, Y, _Direction);
 
 % cell stays alive only if has exactly 2 or 3 neighbours
 % everything else is underpopulated or overpopulated
-alive(X, Y)@next <- neighbours_count(X, Y, 2);
-alive(X, Y)@next <- neighbours_count(X, Y, 3);
+alive(X, Y)@next <- count_neighbours_around(alive, X, Y, 2);
+alive(X, Y)@next <- count_neighbours_around(alive, X, Y, 3);
+% if empty cell has exactly three neighbours -- becomes alive
+alive(X, Y)@next <- count_neighbours_around(dead, X, Y, 3);
 
-% if empty cell has exactly three neighbours -- turns alive
-alive(X, Y)@next <- dead(X, Y), neighbours_count(X, Y, 3);
+count_neighbours_around(alive, X, Y, count<Direction>) <-
+  alive_adjacent(X, Y, X1, Y1, Direction),
+  alive(X1, Y1);
+count_neighbours_around(dead, X, Y, count<Direction>) <-
+  alive_adjacent(X1, Y1, X, Y, Direction),
+  alive(X1, Y1);
 
 
 
