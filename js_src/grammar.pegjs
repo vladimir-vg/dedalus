@@ -114,7 +114,7 @@ ConstArguments
 Constant = Integer / String / Atom
 
 Integer = [-+]?[0-9]+ { return parseInt(text(), 10); }
-String "string" = "\"" content:([^"]*) "\"" { return {String: content.join('') }; }
+String "string" = "\"" content:([^"]*) "\"" { return content.join(''); }
 IntegerValue = Integer / VariableWithoutLocPrefix
 
 Atom "atom" = AtomAlphanumeric / AtomQuoted

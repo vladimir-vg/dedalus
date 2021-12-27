@@ -1,0 +1,30 @@
+ast_fact("./parser/choose.in.dedalus", 0, student, 0, 5)@0;
+  ast_fact_sym_arg(0, 0, 'JimBlack')@0;
+  ast_fact_sym_arg(0, 1, ee)@0;
+  ast_fact_sym_arg(0, 2, senior)@0;
+
+ast_fact("./parser/choose.in.dedalus", 0, professor, 1, 5)@0;
+  ast_fact_sym_arg(1, 0, ohm)@0;
+  ast_fact_sym_arg(1, 1, ee)@0;
+
+ast_fact("./parser/choose.in.dedalus", 0, professor, 2, 5)@0;
+  ast_fact_sym_arg(2, 0, bell)@0;
+  ast_fact_sym_arg(2, 1, ee)@0;
+
+ast_clause("./parser/choose.in.dedalus", 0, elig_adv, 3, none)@0;
+  ast_clause_var_arg(3, 0, 'S', none, false)@0;
+  ast_clause_var_arg(3, 1, 'P', none, false)@0;
+
+  ast_body_rule("./parser/choose.in.dedalus", 0, 3, 0)@0;
+  ast_body_fact(3, 0, student, false)@0;
+    ast_body_var_arg(3, 0, 0, 'S', false)@0;
+    ast_body_var_arg(3, 0, 1, 'Major', false)@0;
+    ast_body_var_arg(3, 0, 2, '_Year', false)@0;
+  ast_body_rule("./parser/choose.in.dedalus", 0, 3, 1)@0;
+  ast_body_fact(3, 1, professor, false)@0;
+    ast_body_var_arg(3, 1, 0, 'P', false)@0;
+    ast_body_var_arg(3, 1, 1, 'Major', false)@0;
+  ast_body_rule("./parser/choose.in.dedalus", 0, 3, 2)@0;
+  ast_body_choose(3, 2)@0;
+    ast_body_choose_key_var(3, 2, 0, 'S')@0;
+    ast_body_choose_row_var(3, 2, 0, 'P')@0;

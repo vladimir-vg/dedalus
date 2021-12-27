@@ -1,4 +1,13 @@
-import { Map } from 'immutable';
+// import { Map } from 'immutable';
+
+// import { get } from "immutable";
+
+import _ from 'lodash';
+import equal from 'fast-deep-equal';
+
+
+// timestamp that we assign to all AST facts
+const AST_TIMESTAMP = 0;
 
 
 
@@ -24,6 +33,21 @@ const boolToSymbol = (val) => {
 
 
 
+
+const mergeDeep = (ast1, ast2) => {
+  const toAdd = [];
+  Object.keys(ast2).forEach((key) => {
+    const oldTuples = ast1.get(key) ?? [];
+    const newTuples = [...oldTuples, ...ast2[key]];
+    const uniqueTuples = _.uniqWith(newTuples, equal);
+    toAdd.push([key, uniqueTuples]);
+  });
+  return new Map([...ast1, ...toAdd]);
+};
+
+
+
+
 const transformFact = (tables, item, factN, filename) => {
   const { line, name, time, args } = item['Fact'];
 
@@ -31,8 +55,8 @@ const transformFact = (tables, item, factN, filename) => {
   const symArgs = [];
   const strArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [factN, argN, arg];
-    if (isSymbol(arg)) { symArgs.push([factN, argN, argToSymbol(arg)]); }
+    const tuple = [AST_TIMESTAMP, factN, argN, arg];
+    if (isSymbol(arg)) { symArgs.push([AST_TIMESTAMP, factN, argN, argToSymbol(arg)]); }
     else if (isInteger(arg)) { intArgs.push(tuple); }
     else if (isString(arg)) { strArgs.push(tuple); }
     else {
@@ -40,9 +64,9 @@ const transformFact = (tables, item, factN, filename) => {
     }
   });
 
-  return tables.mergeDeep({
+  return mergeDeep(tables, {
     'ast_fact/5': [
-      [filename, line, name, factN, time]
+      [AST_TIMESTAMP, filename, line, {symbol: name}, factN, time]
     ],
     'ast_fact_int_arg/3': intArgs,
     'ast_fact_sym_arg/3': symArgs,
@@ -57,9 +81,9 @@ const transformFactCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
   const intTime = [];
   const varTime = [];
   if (isVariable(time)) {
-    varTime.push([clauseN, ruleN, argToSymbol(time)]);
+    varTime.push([AST_TIMESTAMP, clauseN, ruleN, argToSymbol(time)]);
   } else if (isInteger(time)) {
-    intTime.push([clauseN, ruleN, time]);
+    intTime.push([AST_TIMESTAMP, clauseN, ruleN, time]);
   }
 
   const varArgs = [];
@@ -67,12 +91,13 @@ const transformFactCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
   const strArgs = [];
   const symArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [clauseN, ruleN, argN, arg];
+    const tuple = [AST_TIMESTAMP, clauseN, ruleN, argN, arg];
     if (isSymbol(arg)) {
-      symArgs.push([clauseN, ruleN, argN, argToSymbol(arg)]);
+      symArgs.push([AST_TIMESTAMP, clauseN, ruleN, argN, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
       const { location } = arg;
       varArgs.push([
+        AST_TIMESTAMP,
         clauseN, ruleN, argN, argToSymbol(arg), boolToSymbol(location)
       ]);
     } else if (isInteger(arg)) { intArgs.push(tuple); }
@@ -82,12 +107,12 @@ const transformFactCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
     }
   });
 
-  return tables.mergeDeep({
+  return mergeDeep(tables, {
     'ast_body_rule/4': [
-      [filename, line, clauseN, ruleN]
+      [AST_TIMESTAMP, filename, line, clauseN, ruleN]
     ],
     'ast_body_fact/4': [
-      [clauseN, ruleN, argToSymbol(name), boolToSymbol(negated)]
+      [AST_TIMESTAMP, clauseN, ruleN, argToSymbol(name), boolToSymbol(negated)]
     ],
     'ast_body_fact_var_time/3': varTime,
     'ast_body_fact_int_time/3': intTime,
@@ -106,10 +131,11 @@ const transformOperatorCondition = (tables, bodyRule, clauseN, ruleN, filename) 
   const varArgs = [];
   const intArgs = [];
   [left, right].forEach((arg, argN) => {
-    const tuple = [clauseN, ruleN, argN, arg];
+    const tuple = [AST_TIMESTAMP, clauseN, ruleN, argN, arg];
     if (isVariable(arg)) {
       const { location } = arg;
       varArgs.push([
+        AST_TIMESTAMP,
         clauseN, ruleN, argN, argToSymbol(arg), boolToSymbol(location)
       ]);
     } else if (isInteger(arg)) { intArgs.push(tuple); }
@@ -118,12 +144,12 @@ const transformOperatorCondition = (tables, bodyRule, clauseN, ruleN, filename) 
     }
   });
 
-  return tables.mergeDeep({
+  return mergeDeep(tables, {
     'ast_body_rule/4': [
-      [filename, line, clauseN, ruleN]
+      [AST_TIMESTAMP, filename, line, clauseN, ruleN]
     ],
     'ast_body_binop/3': [
-      [clauseN, ruleN, {symbol: op}]
+      [AST_TIMESTAMP, clauseN, ruleN, {symbol: op}]
     ],
     'ast_body_var_arg/5': varArgs,
     'ast_body_int_arg/4': intArgs,
@@ -135,15 +161,16 @@ const transformOperatorCondition = (tables, bodyRule, clauseN, ruleN, filename) 
 const transformChooseCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
   const { line, keyvars, rowvars } = bodyRule['ChooseCondition'];
 
-  const varToTuple = (arg, argN) => [clauseN, ruleN, argN, argToSymbol(arg)];
+  const varToTuple = (arg, argN) =>
+    [AST_TIMESTAMP, clauseN, ruleN, argN, argToSymbol(arg)];
   const keyVars = keyvars.map(varToTuple);
   const rowVars = rowvars.map(varToTuple);
 
-  return tables.mergeDeep({
-    'ast_body_rule/6': [
-      [filename, line, clauseN, ruleN]
+  return mergeDeep(tables, {
+    'ast_body_rule/4': [
+      [AST_TIMESTAMP, filename, line, clauseN, ruleN]
     ],
-    'ast_body_choose/2': [[clauseN, ruleN]],
+    'ast_body_choose/2': [[AST_TIMESTAMP, clauseN, ruleN]],
     'ast_body_choose_key_var/4': keyVars,
     'ast_body_choose_row_var/4': rowVars,
   });
@@ -173,13 +200,14 @@ const transformRule = (tables, item, clauseN, filename) => {
   const strArgs = [];
   const symArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [clauseN, argN, arg];
+    const tuple = [AST_TIMESTAMP, clauseN, argN, arg];
     if (isSymbol(arg)) {
-      symArgs.push([clauseN, argN, argToSymbol(arg)]);
+      symArgs.push([AST_TIMESTAMP, clauseN, argN, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
       const { location, afunc } = arg;
       const afunc1 = {symbol: (afunc ?? 'none')}; 
       varArgs.push([
+        AST_TIMESTAMP,
         clauseN, argN, argToSymbol(arg),
         afunc1, boolToSymbol(location)
       ]);
@@ -194,10 +222,10 @@ const transformRule = (tables, item, clauseN, filename) => {
     return transformBodyRule(tables, bodyRule, clauseN, ruleN, filename)
   }, tables);
 
-  const suffix1 = suffix ?? {Atom: 'none'};
-  return tables1.mergeDeep({
+  const suffix1 = suffix ?? {symbol: 'none'};
+  return mergeDeep(tables1, {
     'ast_clause/5': [
-      [filename, line, name, clauseN, suffix1]
+      [AST_TIMESTAMP, filename, line, {symbol: name}, clauseN, suffix1]
     ],
     'ast_clause_var_arg/5': varArgs,
     'ast_clause_int_arg/3': intArgs,
@@ -226,11 +254,88 @@ const tree2tables = (tree, filename) => {
   const tables = tree.reduce((tables, item, i) =>
     transformItem(tables, item, i, filename), new Map());
 
-  return tables;
+  // let's remove empty tables to make it easier to look at the ast
+  const tables1 = new Map([...tables].filter(
+    ([key, value]) => value.length !== 0));
+
+  return tables1;
+};
+
+
+
+// interprets ast, returns tables of facts
+// that were specified in the source for given timestamp
+const factsFromAst = (ast, timestamp) => {
+  // we need to walk following facts
+  // and assemble facts that they are describing:
+  //
+  // ast_fact/5
+  // ast_fact_sym_arg/3
+  // ast_fact_int_arg/3
+  // ast_fact_str_arg/3
+
+  const output = {};
+  ast.get('ast_fact/5')
+    .filter(fTuple => fTuple[0] == timestamp)
+    .forEach(fTuple => {
+      const [_timestamp, _fname, _line, name, factN, sourceTimestamp] = fTuple;
+
+      // now let's find all arguments and insert them into array
+      const resultTuple = [sourceTimestamp]; // first element is timestamp
+
+      const argNames = ['ast_fact_sym_arg/3', 'ast_fact_int_arg/3', 'ast_fact_str_arg/3'];
+      argNames.forEach(name => {
+        ast.get(name)
+          .filter(([t, factN1, n, val]) =>
+            (t == timestamp) && (factN1 == factN))
+          .forEach(aTuple => {
+            const [_t, _factN, n, val] = aTuple;
+            resultTuple[n+1] = val;
+          });
+      });
+
+      // just to make sure that there weren't any gaps in arguments entries.
+      for (let i=0; i<resultTuple.length; i++) {
+        if (resultTuple[i] === undefined) {
+          throw new Error(`got empty value at ${i} for ${factN}th ${name}`);
+        }
+      }
+
+      // at this point, we collected all values into resultTuple.
+      const key = `${name.symbol}/${resultTuple.length-1}`;
+      output[key] = (output[key] ?? []);
+      output[key].push(resultTuple);
+    });
+
+  return mergeDeep(new Map(), output);
+}
+
+
+
+// sets all information about line numbers and file source paths
+// for easier comparison in test
+const clearLineNumbersFromAst = (ast) => {
+  const clearLineNumber = (tuple) => {
+    const [t, filename, _line, ...rest] = tuple;
+    const tuple1 = [t, filename, 0, ...rest];
+    return tuple1;
+  };
+  return new Map([...ast].map(([key, tuples]) => {
+    switch (key) {
+      case 'ast_fact/5':
+      case 'ast_clause/5':
+      case 'ast_body_rule/4':
+        return [key, tuples.map(clearLineNumber)];
+      default:
+        return [key, tuples];
+    }
+  }));
 };
 
 
 
 export {
-  tree2tables
+  tree2tables,
+  factsFromAst,
+  clearLineNumbersFromAst
 }

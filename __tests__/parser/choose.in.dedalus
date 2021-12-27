@@ -1,0 +1,9 @@
+student('JimBlack', ee, senior)@5;
+
+professor(ohm, ee)@5;
+professor(bell, ee)@5;
+
+elig_adv(S, P) <-
+  student(S, Major, _Year),
+  professor(P, Major),
+  choose((S), (P));

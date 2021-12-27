@@ -9,6 +9,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const grammarPath = path.join(__dirname, 'grammar.pegjs');
+const grammarText = await fs.readFile(grammarPath);
+const dedalusParser = peg.generate(String(grammarText));
+
+
+
+const parseDedalus = (dedalusText, filename) => {
+  const tree = dedalusParser.parse(String(dedalusText));
+  const astTables = tree2tables(tree, filename);
+  return astTables;
+};
 
 
 
@@ -43,5 +53,6 @@ const runFile = async (path) => {
 
 
 export {
+  parseDedalus,
   runFile
 }
