@@ -21,6 +21,7 @@ const testcases = [
   ['choose'],
   ['broadcast'],
   ['lamport_clock'],
+  ['various'],
 ];
 test.each(testcases)('%s', async (name) => {
   const inputPath = path.join(__dirname, `./parser/${name}.in.dedalus`);
@@ -36,7 +37,8 @@ test.each(testcases)('%s', async (name) => {
   // in order to match tables using jest, wrap all tuples
   // with expect.arrayContaining, 
 
-  expect(Object.fromEntries(wrapTable([...expectedFacts])))
-    .toMatchObject(Object.fromEntries([...inputAstWithoutLines]));
+  const received = Object.fromEntries(wrapTable([...inputAstWithoutLines]));
+  const expected = Object.fromEntries([...expectedFacts]);
+  expect(received).toMatchObject(expected);
 });
 

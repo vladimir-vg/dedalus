@@ -1,0 +1,8 @@
+
+no_fields_fact@100;
+
+
+omin(A, min<C>) <-
+  m_priority_queue(A, _, C);
+
+

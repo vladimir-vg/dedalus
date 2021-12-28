@@ -132,7 +132,7 @@ VariableWithoutLocPrefix "variable" = head:[A-Z_] tail:[a-zA-Z0-9_]* {
 Operator "binary operator" = ">=" / "=<" / ">" / "<" / "=/=" / "=" { return text(); }
 
 AggregatedVariable = func:Atom "<" name:Variable ">" {
-	return { Variable: { name: name['Variable'], afunc: func['Atom'], location: false } };
+	return { Variable: { name: name['Variable']['name'], afunc: func['Atom'], location: false } };
 }
 
 

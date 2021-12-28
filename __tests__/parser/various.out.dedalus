@@ -1,0 +1,13 @@
+ast_fact("./parser/various.in.dedalus", 0, no_fields_fact, 0, 100)@0;
+
+ast_fact("./parser/various.in.dedalus", 0, fact_repeated, 1, 5)@0;
+
+ast_clause("./parser/various.in.dedalus", 0, omin, 1, none)@0;
+  ast_clause_var_arg(1, 0, 'A', none, false)@0;
+  ast_clause_var_arg(1, 1, 'C', min, false)@0;
+
+  ast_body_rule("./parser/various.in.dedalus", 0, 1, 0)@0;
+  ast_body_fact(1, 0, m_priority_queue, false)@0;
+    ast_body_var_arg(1, 0, 0, 'A', false)@0;
+    ast_body_var_arg(1, 0, 1, '_', false)@0;
+    ast_body_var_arg(1, 0, 2, 'C', false)@0;

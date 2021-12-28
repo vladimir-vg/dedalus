@@ -205,7 +205,7 @@ const transformRule = (tables, item, clauseN, filename) => {
       symArgs.push([AST_TIMESTAMP, clauseN, argN, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
       const { Variable: { location, afunc } } = arg;
-      const afunc1 = {symbol: (afunc ?? 'none')}; 
+      const afunc1 = {symbol: (afunc ?? 'none')};
       varArgs.push([
         AST_TIMESTAMP,
         clauseN, argN, argToSymbol(arg),
