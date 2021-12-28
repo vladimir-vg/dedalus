@@ -95,7 +95,7 @@ const transformFactCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
     if (isSymbol(arg)) {
       symArgs.push([AST_TIMESTAMP, clauseN, ruleN, argN, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
-      const { location } = arg;
+      const { Variable: { location } } = arg;
       varArgs.push([
         AST_TIMESTAMP,
         clauseN, ruleN, argN, argToSymbol(arg), boolToSymbol(location)
@@ -204,7 +204,7 @@ const transformRule = (tables, item, clauseN, filename) => {
     if (isSymbol(arg)) {
       symArgs.push([AST_TIMESTAMP, clauseN, argN, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
-      const { location, afunc } = arg;
+      const { Variable: { location, afunc } } = arg;
       const afunc1 = {symbol: (afunc ?? 'none')}; 
       varArgs.push([
         AST_TIMESTAMP,
@@ -222,7 +222,7 @@ const transformRule = (tables, item, clauseN, filename) => {
     return transformBodyRule(tables, bodyRule, clauseN, ruleN, filename)
   }, tables);
 
-  const suffix1 = suffix ?? {symbol: 'none'};
+  const suffix1 = {symbol: suffix ?? 'none'};
   return mergeDeep(tables1, {
     'ast_clause/5': [
       [AST_TIMESTAMP, filename, line, {symbol: name}, clauseN, suffix1]

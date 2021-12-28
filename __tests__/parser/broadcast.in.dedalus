@@ -1,0 +1,12 @@
+% this example was copied from the original Dedalus paper
+
+sbcast(#Member, Sender, Message)@async <-
+  smessage(#Agent, Sender, Message),
+  members(#Agent, Member);
+
+%% ... skipped ...
+
+rdeliver(Me, Sender, Message)@next <-
+  buf_bcast(Sender, Me, Message);
+
+
