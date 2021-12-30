@@ -1,9 +1,4 @@
-// import { Map } from 'immutable';
-
-// import { get } from "immutable";
-
 import _ from 'lodash';
-import equal from 'fast-deep-equal';
 
 
 // timestamp that we assign to all AST facts
@@ -38,7 +33,7 @@ const mergeDeep = (ast1, ast2) => {
   Object.keys(ast2).forEach((key) => {
     const oldTuples = ast1.get(key) ?? [];
     const newTuples = [...oldTuples, ...ast2[key]];
-    const uniqueTuples = _.uniqWith(newTuples, equal);
+    const uniqueTuples = _.uniqWith(newTuples, _.isEqual);
     toAdd.push([key, uniqueTuples]);
   });
   return new Map([...ast1, ...toAdd]);
