@@ -33,7 +33,6 @@ const boolToSymbol = (val) => {
 
 
 
-
 const mergeDeep = (ast1, ast2) => {
   const toAdd = [];
   Object.keys(ast2).forEach((key) => {
@@ -44,7 +43,6 @@ const mergeDeep = (ast1, ast2) => {
   });
   return new Map([...ast1, ...toAdd]);
 };
-
 
 
 
@@ -334,8 +332,32 @@ const clearLineNumbersFromAst = (ast) => {
 
 
 
+const getMinimalTimestamp = (ast) => {
+  const timestamps = (ast.get('ast_fact/5') ?? []).map(tuple => tuple[0]);
+  return timestamps.reduce(Math.min, 0);
+};
+
+const rulesFromAst = (ast) => {
+  return new Map([...ast].filter(([key, tuples]) => {
+    switch (key) {
+      case 'ast_fact/5':
+      case 'ast_fact_sym_arg/3':
+      case 'ast_fact_int_arg/3':
+      case 'ast_fact_str_arg/3':
+        return false;
+      default:
+        return true;
+    }
+  }));
+};
+
+
+
 export {
+  mergeDeep,
   tree2tables,
   factsFromAst,
-  clearLineNumbersFromAst
+  clearLineNumbersFromAst,
+  getMinimalTimestamp,
+  rulesFromAst,
 }

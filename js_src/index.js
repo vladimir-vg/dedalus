@@ -3,7 +3,13 @@ import path from 'path';
 import fs from 'fs/promises';
 import peg from 'peggy';
 
-import { tree2tables } from './ast.js';
+import {
+  factsFromAst, tree2tables, getMinimalTimestamp, rulesFromAst
+} from './ast.js';
+
+import { Interpreter } from './interpreter.js';
+
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,23 +29,23 @@ const parseDedalus = (dedalusText, filename) => {
 
 
 const runFile = async (path) => {
-  const grammarText = await fs.readFile(grammarPath);
   const dedalusText = await fs.readFile(path);
-  const parser = peg.generate(String(grammarText));
-  const tree = parser.parse(String(dedalusText));
-  const astTables = tree2tables(tree, path);
+  const tree = dedalusParser.parse(String(dedalusText));
+  const ast = tree2tables(tree, path);
   console.log(astTables.toJS());
 
-  const facts0 = getInitialFacts(astTables);
-  const initialTimestamp = getMinimalTimestamp(facts0);
-  const rules = getRules(astTables);
-  const runtime = new Interpreter(initialTimestamp, rules);
+  const initialTimestamp = getMinimalTimestamp(ast);
+  // better to explicitly separate facts from rules
+  // give interpreter only rules, provide facts from outside
+  // this way it is less messy
+  const rules = rulesFromAst(ast);
+  const runtime = new Interpreter(initialTimestamp-1, rules);
 
   // if we have exactly same output as previous step
   // then we are stale, no need to run further
-  while (!runtime.isStale()) {
-    const timestamp = runtime.getCurrentTimestamp();
-    const facts = initalFactsForTimestamp(timestamp+1, astTables);
+  do {
+    const timestamp = runtime.timestamp;
+    const facts = factsFromAst(ast, timestamp+1);
     runtime.insertFactsForNextTick(facts);
     // here we also could insert incoming event facts from other nodes
     // runtime.insertFactsForNextTick(eventsFromOtherNodes);
@@ -47,7 +53,10 @@ const runFile = async (path) => {
     // compute all @next and @async rules, store computed facts
     // return emitted @async facts to be delivered outside
     const { events } = runtime.tick();
-  }
+
+    // TODO: add check, that no facts in AST left
+    // if there is still something, need to jump to that timestamp
+  } while (!runtime.isStale());
 };
 
 
