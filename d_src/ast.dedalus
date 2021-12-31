@@ -4,6 +4,15 @@
 % to check if ast is correct.
 
 
+%%%
+%%% Correctness checks to implement:
+%%%
+%%% [ ] No negation in dependency cycles
+%%% [ ] _IgnoredVariable's used only once in body (otherwise they are used for matching)
+%%%
+
+
+
 % format of the facts that will describe Dedalus source
 % that later will be used to correctness check, type inference
 % and transformation.

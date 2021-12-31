@@ -6,7 +6,7 @@ const AST_TIMESTAMP = 0;
 
 
 
-const isString = (val) => typeof val === 'string';
+const isString = (val) => (typeof val === 'object') && ('string' in val);
 const isInteger = (val) => typeof val === 'number';
 // TODO: rename Atom to Symbol
 // seems like in Datalog community atoms are not same as symbols
@@ -244,8 +244,9 @@ const transformItem = (tables, item, index, filename) => {
 
 // produce sets of tuples for each rule
 const tree2tables = (tree, filename) => {
+  const filenameStr = {string: filename};
   const tables = tree.reduce((tables, item, i) =>
-    transformItem(tables, item, i, filename), new Map());
+    transformItem(tables, item, i, filenameStr), new Map());
 
   // let's remove empty tables to make it easier to look at the ast
   const tables1 = new Map([...tables].filter(

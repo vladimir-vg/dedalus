@@ -7,16 +7,16 @@ import { mergeDeep } from './ast.js';
 const findLineWithNegation = (rules) => {
   const tuples1 = rules.get('ast_body_fact/4');
   const bodyFact = _.find(tuples1, tuple => {
-    const [_timestamp, _clauseN, _ruleN, negated] = tuple;
+    const [_timestamp0, _clauseN0, _ruleN0, negated] = tuple;
     return negated;
   });
   if (!bodyFact) {
     return null;
   }
-  const [_timestamp, clauseN, ruleN, _negated] = bodyFact;
+  const [_timestamp1, clauseN, ruleN, _negated1] = bodyFact;
   const tuples2 = rules.get('ast_body_rule/4');
-  const [_timestamp, _filename, line] = _.find(tuples2, tuple => {
-    const [_timestamp, _filename, _line, clauseN1, ruleN1] = tuple;
+  const [_timestamp2, _filename2, line] = _.find(tuples2, tuple => {
+    const [_timestamp3, _filename3, _line3, clauseN1, ruleN1] = tuple;
     return (clauseN == clauseN1) && (ruleN == ruleN1);
   });
   return line;
