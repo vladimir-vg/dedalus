@@ -120,11 +120,11 @@ range_restricted_rule(Name, Arity) <-
   % is range-restricted
   range_restricted_clause(ClauseN);
 
-number_of_clauses(Name, Arity, 0) <-
-  todo;
+% number_of_clauses(Name, Arity, 0) <-
+%   todo;
 
-range_restricted_clause(ClauseN) <-
-  todo;
+% range_restricted_clause(ClauseN) <-
+%   todo;
 
 % if we have several arities for same name
 % this would produce several facts
@@ -166,20 +166,20 @@ clause_arg_number(ClauseN, ArgN) <- ast_clause_sym_arg(ClauseN, ArgN, _Value);
 %    Correct.
 %
 % So, here is the rule to detect 3rd case:
-err_location_var_in_body_but_not_in_head(Filename, Line1, Line2) <-
-  ast_clause(Filename, Line1, _Name, ClauseN, '@async'),
-  ast_body_rule(Filename, Line2, ClauseN, RuleN),
-  % okay, so there exist a variable with location prefix in body
-  ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
-  LocPrefix = true,
+% err_location_var_in_body_but_not_in_head(Filename, Line1, Line2) <-
+%   ast_clause(Filename, Line1, _Name, ClauseN, '@async'),
+%   ast_body_rule(Filename, Line2, ClauseN, RuleN),
+%   % okay, so there exist a variable with location prefix in body
+%   ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
+%   LocPrefix = true,
  
-  % all variables in negated rule must appear in positive rule
-  % that's why we use helper rule
-  not exist_var_in_head_with_location_prefix(ClauseN);
+%   % all variables in negated rule must appear in positive rule
+%   % that's why we use helper rule
+%   not exist_var_in_head_with_location_prefix(ClauseN);
 
-exist_var_in_head_with_location_prefix(ClauseN) <-
-  ast_clause_var_arg(ClauseN, _ArgN, _VarName, _AggFunc, LocPrefix),
-  LocPrefix = true;
+% exist_var_in_head_with_location_prefix(ClauseN) <-
+%   ast_clause_var_arg(ClauseN, _ArgN, _VarName, _AggFunc, LocPrefix),
+%   LocPrefix = true;
 
 
 

@@ -31,9 +31,9 @@ RuleWithoutBody = head:RuleHead ";" {
     };
 }
 RuleHead = RuleHeadWithArgs / RuleHeadWithoutArgs
-RuleHeadWithoutArgs = name:Atom { return { name: name['Atom'], args: [] } }
-RuleHeadWithArgs = name:Atom "(" WhiteSpace? args:HeadArguments WhiteSpace? ")" {
-	return { name: name['Atom'], args: args };
+RuleHeadWithoutArgs = name:Symbol { return { name: name['symbol'], args: [] } }
+RuleHeadWithArgs = name:Symbol "(" WhiteSpace? args:HeadArguments WhiteSpace? ")" {
+	return { name: name['symbol'], args: args };
 }
 RuleBody
 	= cond:RuleCondition WhiteSpace? "," ToSkip? rest:RuleBody { return [cond].concat(rest); }
@@ -51,7 +51,7 @@ VarList = var1:VariableWithoutLocPrefix WhiteSpace? "," WhiteSpace? rest:VarList
 		  }
 		/ var1:VariableWithoutLocPrefix { return [var1]; }
 
-OperatorCondition = left:IntegerValue WhiteSpace? op:Operator WhiteSpace? right:IntegerValue {
+OperatorCondition = left:Value WhiteSpace? op:Operator WhiteSpace? right:Value {
 	const line = location().start.line;
     return { OperatorCondition: {left: left, op: op, right: right, line: line} };
 }
@@ -70,30 +70,30 @@ FactCondition
       };
     }
 FactCondition1
-	= name:Atom "(" args:BodyArguments ")" "@" time:IntegerValue {
+	= name:Symbol "(" args:BodyArguments ")" "@" time:IntegerValue {
     	return { FactCondition: { name: name, args: args, time: time } };
     }
-    / name:Atom "(" args:BodyArguments ")" {
+    / name:Symbol "(" args:BodyArguments ")" {
     	return { FactCondition: { name: name, args: args, time: null } };
     }
-    / name:Atom "@" time:IntegerValue {
+    / name:Symbol "@" time:IntegerValue {
     	return { FactCondition: { name: name, args: [], time: time } };
     }
-    / name:Atom {
+    / name:Symbol {
     	return { FactCondition: { name: name, args: [], time: null } };
     }
 
 
 Fact "fact" = FactWithArgs / FactWithoutArgs
 FactWithoutArgs
-	= name:Atom "@" time:Integer WhiteSpace? ";" {
-    	return { Fact: { name: name['Atom'], args: [], time: time, line: location().start.line } }
+	= name:Symbol "@" time:Integer WhiteSpace? ";" {
+    	return { Fact: { name: name['symbol'], args: [], time: time, line: location().start.line } }
     }
 FactWithArgs
-	= name:Atom "("  WhiteSpace? args:ConstArguments WhiteSpace? ")"
+	= name:Symbol "("  WhiteSpace? args:ConstArguments WhiteSpace? ")"
       "@" time:Integer WhiteSpace? ";" {
       	const args1 = args.filter(function (x) { return x != null; });
-    	return { Fact: {name: name['Atom'], args: args1, time: time, line: location().start.line } };
+    	return { Fact: {name: name['symbol'], args: args1, time: time, line: location().start.line } };
     }
 
 HeadArguments
@@ -111,17 +111,18 @@ BodyArgument
 ConstArguments
 	= arg:Constant WhiteSpace? "," WhiteSpace? rest:ConstArguments { return [arg].concat(rest); }
     / arg:Constant { return [arg]; }
-Constant = Integer / String / Atom
+Constant = Integer / String / Symbol
 
 Integer = [-+]?[0-9]+ { return parseInt(text(), 10); }
 String "string" = "\"" content:([^"]*) "\"" { return {string: content.join('')}; }
 IntegerValue = Integer / VariableWithoutLocPrefix
+Value = Integer / String / Symbol / VariableWithoutLocPrefix
 
-Atom "atom" = AtomAlphanumeric / AtomQuoted
-AtomAlphanumeric
-	= head:[a-z] tail:[a-zA-Z0-9_]* { return { Atom: (head + tail.join('')) }; }
-AtomQuoted
-	= "'" content:[^']+ "'" { return { Atom: content.join('') }; }
+Symbol "symbol" = SymbolAlphanumeric / SymbolQuoted
+SymbolAlphanumeric
+	= head:[a-z] tail:[a-zA-Z0-9_]* { return { symbol: (head + tail.join('')) }; }
+SymbolQuoted
+	= "'" content:[^']+ "'" { return { symbol: content.join('') }; }
 
 Variable "variable" = loc:"#"? head:[A-Z_] tail:[a-zA-Z0-9_]* {
 	return { Variable: { name: (head + tail.join('')), location: !!loc } };
@@ -131,8 +132,8 @@ VariableWithoutLocPrefix "variable" = head:[A-Z_] tail:[a-zA-Z0-9_]* {
 }
 Operator "binary operator" = ">=" / "=<" / ">" / "<" / "=/=" / "=" { return text(); }
 
-AggregatedVariable = func:Atom "<" name:Variable ">" {
-	return { Variable: { name: name['Variable']['name'], afunc: func['Atom'], location: false } };
+AggregatedVariable = func:Symbol "<" name:Variable ">" {
+	return { Variable: { name: name['Variable']['name'], afunc: func['symbol'], location: false } };
 }
 
 

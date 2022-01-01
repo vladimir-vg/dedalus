@@ -32,7 +32,7 @@ const runFile = async (path) => {
   const dedalusText = await fs.readFile(path);
   const tree = dedalusParser.parse(String(dedalusText));
   const ast = tree2tables(tree, path);
-  console.log(astTables.toJS());
+  // console.log(astTables.toJS());
 
   const initialTimestamp = getMinimalTimestamp(ast);
   // better to explicitly separate facts from rules
@@ -43,7 +43,7 @@ const runFile = async (path) => {
 
   // if we have exactly same output as previous step
   // then we are stale, no need to run further
-  do {
+  // do {
     const timestamp = runtime.timestamp;
     const facts = factsFromAst(ast, timestamp+1);
     runtime.insertFactsForNextTick(facts);
@@ -52,11 +52,12 @@ const runFile = async (path) => {
 
     // compute all @next and @async rules, store computed facts
     // return emitted @async facts to be delivered outside
-    const { events } = runtime.tick();
+    const newFacts = runtime.deductFacts();
+    console.log(newFacts);
 
     // TODO: add check, that no facts in AST left
     // if there is still something, need to jump to that timestamp
-  } while (!runtime.isStale());
+  // } while (!runtime.isStale());
 };
 
 

@@ -192,17 +192,23 @@ class Table {
   }
 
   projectColumns(columns) {
-    if (_.some(columns, name => !this.columns.includes(name))) {
+    const hasUnknownColumn = _.some(columns, col =>
+      (typeof col == 'string') && !this.columns.includes(col));
+    if (hasUnknownColumn) {
       // we are requested project a column name that is not present
       throw new Error(`Unexpected columns to project ${JSON.stringify(columns)} from ${JSON.stringify(this.columns)}`);
     }
+
     const rows1 = this.rows.forEach(row => {
-      const pairs = projectRowValues(row, this.columns, columns);
-      const [_cols, values] = _.unzip(pairs);
-      return values;
+      return columns.map(col => {
+        if (typeof col === 'string') {
+          return row[this.columns.indexOf(col)];
+        }
+        return col; // return constant value as is
+      });
     });
     const rows = _.uniqWith(rows1, _.isEqual);
-    return new Table(columns, rows)
+    return rows;
   }
 
   select(conditions0) {

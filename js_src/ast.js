@@ -12,13 +12,13 @@ const isInteger = (val) => typeof val === 'number';
 // seems like in Datalog community atoms are not same as symbols
 // better to rename to avoid confusion
 const isSymbol = (val) => {
-  return (typeof val === 'object') && ('Atom' in val);
+  return (typeof val === 'object') && ('symbol' in val);
 };
 const isVariable = (val) => {
   return (typeof val === 'object') && (val !== null) && ('Variable' in val);
 };
 
-const argToSymbol = (arg) => ({ symbol: arg['Atom'] ?? arg['Variable']['name'] });
+const argToSymbol = (arg) => ({ symbol: arg['symbol'] ?? arg['Variable']['name'] });
 
 const boolToSymbol = (val) => {
   if (val === null) { return {symbol: 'none'}; }
@@ -131,7 +131,10 @@ const transformOperatorCondition = (tables, bodyRule, clauseN, ruleN, filename) 
         AST_TIMESTAMP,
         clauseN, ruleN, argN, argToSymbol(arg), boolToSymbol(location)
       ]);
-    } else if (isInteger(arg)) { intArgs.push(tuple); }
+    }
+    else if (isInteger(arg)) { intArgs.push(tuple); }
+    else if (isSymbol(arg)) { intArgs.push(tuple); }
+    else if (isString(arg)) { intArgs.push(tuple); }
     else {
       throw new Error(`Unknown fact argument type: ${JSON.stringify(arg)}`);
     }
@@ -269,7 +272,7 @@ const factsFromAst = (ast, timestamp) => {
   // ast_fact_str_arg/3
 
   const output = {};
-  ast.get('ast_fact/5')
+  (ast.get('ast_fact/5') ?? [])
     .filter(fTuple => fTuple[0] == timestamp)
     .forEach(fTuple => {
       const [_timestamp, _fname, _line, name, factN, sourceTimestamp] = fTuple;
