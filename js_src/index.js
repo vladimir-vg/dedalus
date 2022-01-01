@@ -15,15 +15,43 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const grammarPath = path.join(__dirname, 'grammar.pegjs');
-const grammarText = await fs.readFile(grammarPath);
-const dedalusParser = peg.generate(String(grammarText));
+const validatorPath = path.join(__dirname, '..', 'd_src', 'validator.dedalus');
 
 
 
-const parseDedalus = (dedalusText, filename) => {
+const parseDedalus = async (dedalusText, filename) => {
+  const grammarText = await fs.readFile(grammarPath);
+  const dedalusParser = peg.generate(String(grammarText));
+
   const tree = dedalusParser.parse(String(dedalusText));
   const astTables = tree2tables(tree, filename);
   return astTables;
+};
+
+
+
+const validateFile = async (path) => {
+  const sourceDedalusText = await fs.readFile(path);
+  const sourceAst = await parseDedalus(sourceDedalusText, path);
+  const validatorDedalusText = await fs.readFile(validatorPath);
+  const validatorAst = await parseDedalus(validatorDedalusText, validatorPath);
+  
+  // better to explicitly separate facts from rules
+  // give interpreter only rules, provide facts from outside
+  // this way it is less messy
+  const rules = rulesFromAst(validatorAst);
+  const initialTimestamp = getMinimalTimestamp(sourceAst);
+  const runtime = new Interpreter(initialTimestamp-1, rules);
+  // const timestamp = runtime.timestamp;
+  // const facts = factsFromAst(sourceAst, timestamp);
+
+  // console.log({ sourceAst });
+
+  // if we have exactly same output as previous step
+  // then we are stale, no need to run further
+  runtime.insertFactsForNextTick(sourceAst);
+  const newFacts = runtime.deductFacts();
+  console.log(newFacts);
 };
 
 
@@ -64,5 +92,6 @@ const runFile = async (path) => {
 
 export {
   parseDedalus,
-  runFile
+  runFile,
+  validateFile,
 }

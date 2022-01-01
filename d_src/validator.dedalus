@@ -45,6 +45,9 @@
 % % expected to have two arg facts with ArgN=1 and ArgN=2
 % ast_body_binop(ClauseN, RuleN, Op)
 
+produced_value(ClauseN, RuleN, Name) <-
+  ast_body_fact(ClauseN, RuleN, Name, _Negated);
+
 % ast_body_fact(ClauseN, RuleN, Name, Negated)
 % % if body rule has explicit time variable
 % ast_body_fact_var_time(ClauseN, RuleN, VarName)
@@ -128,9 +131,9 @@ range_restricted_rule(Name, Arity) <-
 
 % if we have several arities for same name
 % this would produce several facts
-clause_arity(Name, ClauseN, count<ArgN>) <-
-  ast_clause(_Filename, _Line, Name, ClauseN, _Suffix),
-  ast_clause_arg_number(ClauseN, ArgN);
+% clause_arity(Name, ClauseN, count<ArgN>) <-
+%   ast_clause(_Filename, _Line, Name, ClauseN, _Suffix),
+%   ast_clause_arg_number(ClauseN, ArgN);
 
 clause_arg_number(ClauseN, ArgN) <-
   ast_clause_var_arg(ClauseN, ArgN, _VName, _AFunc, _LPrefix);
@@ -219,12 +222,12 @@ body_fact_has_time_suffix(ClauseN, RuleN) <-
 
 
 % negation
-err_var_in_negation_not_present_in_positive(Filename, Line) <-
-  ast_body_rule(Filename, Line, ClauseN, RuleN),
-  ast_body_fact(ClauseN, RuleN, _Name, Negated),
-  Negated = true,
-  ast_body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix),
-  not var_present_in_positive_rule(ClauseN, VarName);
+% err_var_in_negation_not_present_in_positive(Filename, Line) <-
+%   ast_body_rule(Filename, Line, ClauseN, RuleN),
+%   ast_body_fact(ClauseN, RuleN, _Name, Negated),
+%   Negated = true,
+%   ast_body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix),
+%   not var_present_in_positive_rule(ClauseN, VarName);
 
 var_present_in_positive_rule(ClauseN, VarName) <-
   ast_body_fact(ClauseN, RuleN, _Name, Negated),

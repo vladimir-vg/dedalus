@@ -31,7 +31,7 @@ const collectValuesFromFacts = (ast, selectors) => {
   selectors.forEach(({ key, keep, selectValue, selectIndex }) => {
     (ast.get(key) ?? []).forEach(row => {
       if (!keep(row)) { return; }
-      const index = selectIndex(row)+1;
+      const index = selectIndex(row);
       result[index] = selectValue(row);
     });
   });
@@ -68,7 +68,7 @@ const collectBodyFacts = (ast, clauseN) => {
       valueCollector('ast_body_str_arg/4'),
       valueCollector('ast_body_sym_arg/4'),
     ]);
-    const key = `${name}/${params.length}`;
+    const key = `${name['symbol']}/${params.length}`;
 
     items.push({ key, params });
   });
@@ -79,7 +79,7 @@ const collectBodyFacts = (ast, clauseN) => {
 const collectBodyConditions = (ast, clauseN) => {
   const items = [];
   (ast.get('ast_body_binop/3') ?? []).forEach(tuple => {
-    const [_t, clauseN1, ruleN, op] = tuple;
+    const [_t, clauseN1, _ruleN, op] = tuple;
     if (clauseN1 != clauseN) { return; }
 
     const valueCollector = (key) => ({
@@ -90,10 +90,10 @@ const collectBodyConditions = (ast, clauseN) => {
     });
 
     const params = collectValuesFromFacts(ast, [
-      valueCollector('ast_clause_var_arg/5'),
-      valueCollector('ast_clause_int_arg/3'),
-      valueCollector('ast_clause_str_arg/3'),
-      valueCollector('ast_clause_sym_arg/3'),
+      valueCollector('ast_body_var_arg/5'),
+      valueCollector('ast_body_int_arg/4'),
+      valueCollector('ast_body_str_arg/4'),
+      valueCollector('ast_body_sym_arg/4'),
     ]);
     
     items.push([params[0], op, params[1]]);
@@ -122,12 +122,12 @@ const prepareDeductiveClauses = (ast) => {
       valueCollector('ast_clause_str_arg/3'),
       valueCollector('ast_clause_sym_arg/3'),
     ]);
-    const key = `${name}/${params.length}`;
+    const key = `${name['symbol']}/${params.length}`;
 
     const bodyFacts = collectBodyFacts(ast, clauseN);
     const bodyConditions = collectBodyConditions(ast, clauseN);
 
-    return { key, params, bodyFacts, bodyConditions };
+    clauses.push({ key, params, bodyFacts, bodyConditions });
   });
   return clauses;
 };
@@ -142,8 +142,11 @@ const produceFactsUsingDeductiveRules = (timestamp, astRules, facts) => {
   // { key, params, bodyFacts: [{ key, params }, ...], bodyConditions: [[a, op, b], ...] }
   // conditions must come after facts in the body
   const clauses = prepareDeductiveClauses(astRules);
-  return clauses.reduce((clause, newFacts) => {
+
+  return clauses.reduce((newFacts, clause) => {
     const { key, params, bodyFacts, bodyConditions } = clause;
+
+
     const tables = bodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
     const table0 = tables.reduce((t1, t2) => t1.join(t2));
     const table1 = table0.select(bodyConditions);
@@ -174,13 +177,15 @@ class Interpreter {
     }
   }
 
-  isStale() {
-    // should return true when we reached fixpoint in computation
-    // TODO: deep equality check, ignoring tuples order
-  }
+  // isStale() {
+  //   // should return true when we reached fixpoint in computation
+  //   // TODO: deep equality check, ignoring tuples order
+  // }
 
   insertFactsForNextTick(facts) {
+    // console.log({ facts })
     this.upcomingTickFacts = mergeDeep(this.upcomingTickFacts, facts);
+    // console.log(this.upcomingTickFacts);
   }
 
   // this call computes all deductive facts (classic Datalog)
@@ -191,6 +196,7 @@ class Interpreter {
     do {
       const currentFacts = mergeDeep(this.upcomingTickFacts, accumulatedFacts);
       const newFacts = produceFactsUsingDeductiveRules(this.timestamp+1, this.rules, currentFacts);
+      // console.log(this.upcomingTickFacts);
       accumulatedFacts = mergeDeep(accumulatedFacts, newFacts);
       newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
     } while (newTuplesCount > 0);

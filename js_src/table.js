@@ -5,7 +5,7 @@ import _ from 'lodash';
 const projectFactsToRows = (tuples, params) => {
   // vars might be repeated, also might be ignored
   // only unique non-ignored vars are kept as columns
-  
+
   const columns = _.uniq(params.filter(v =>
     (typeof v == 'string') && (v[0] !== '_')));
   const rows1 = [];
@@ -162,11 +162,11 @@ class Table {
   // we take certain fact name and map it according to variables
   static fromFacts(facts, key, params) {
     const [_, n] = key.split('/');
-    if (parseInt(n) != vars.length) {
-      throw new Error(`Arity of the tuple ${key} doesn't match variables ${JSON.stringify(vars)}`);
+    if (parseInt(n) != params.length) {
+      throw new Error(`Arity of the tuple ${key} doesn't match variables ${JSON.stringify(params)}`);
     }
 
-    const { rows, columns } = projectFactsToRows(facts.get(key), params);
+    const { rows, columns } = projectFactsToRows((facts.get(key) ?? []), params);
     return new Table(columns, rows);
   }
 

@@ -28,15 +28,25 @@ const boolToSymbol = (val) => {
 
 
 
-const mergeDeep = (ast1, ast2) => {
+const mergeDeep = (facts, addition) => {
   const toAdd = [];
-  Object.keys(ast2).forEach((key) => {
-    const oldTuples = ast1.get(key) ?? [];
-    const newTuples = [...oldTuples, ...ast2[key]];
-    const uniqueTuples = _.uniqWith(newTuples, _.isEqual);
+
+  let entries;
+  if (addition instanceof Map) {
+    entries = [...addition.entries()];
+  } else {
+    entries = Object.entries(addition);
+  }
+
+  entries.forEach(([key, newTuples]) => {
+    const oldTuples = facts.get(key) ?? [];
+    const tuples = [...oldTuples, ...newTuples];
+    const uniqueTuples = _.uniqWith(tuples, _.isEqual);
     toAdd.push([key, uniqueTuples]);
   });
-  return new Map([...ast1, ...toAdd]);
+  const newFacts = new Map([...facts, ...toAdd]);
+  // console.log({ newFacts });
+  return newFacts;
 };
 
 
@@ -270,6 +280,8 @@ const factsFromAst = (ast, timestamp) => {
   // ast_fact_sym_arg/3
   // ast_fact_int_arg/3
   // ast_fact_str_arg/3
+
+  // console.log({ ast })
 
   const output = {};
   (ast.get('ast_fact/5') ?? [])

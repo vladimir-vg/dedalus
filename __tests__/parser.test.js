@@ -13,7 +13,7 @@ const __dirname = path.dirname(__filename);
 const wrapTable = (pairs) => {
   return pairs.map(([key, arr]) =>
     [key, expect.arrayContaining(arr)])
-}
+};
 
 
 
@@ -29,8 +29,8 @@ test.each(testcases)('%s', async (name) => {
 
   const inputText = await fs.readFile(inputPath);
   const outputText = await fs.readFile(outputPath);
-  const inputAst = parseDedalus(inputText, `./parser/${name}.in.dedalus`);
-  const outputAst = parseDedalus(outputText, `./parser/${name}.out.dedalus`);
+  const inputAst = await parseDedalus(inputText, `./parser/${name}.in.dedalus`);
+  const outputAst = await parseDedalus(outputText, `./parser/${name}.out.dedalus`);
   const inputAstWithoutLines = clearLineNumbersFromAst(inputAst);
   const expectedFacts = factsFromAst(outputAst, 0);   
 
