@@ -51,7 +51,8 @@ const validateFile = async (path) => {
   // then we are stale, no need to run further
   runtime.insertFactsForNextTick(sourceAst);
   const newFacts = runtime.deductFacts();
-  console.log(newFacts);
+  return newFacts;
+  // console.log(newFacts);
 };
 
 

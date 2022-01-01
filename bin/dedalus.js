@@ -2,6 +2,7 @@
 import commander from 'commander';
 
 import { runFile, validateFile } from '../js_src/index.js';
+import { prettyPrintFacts } from '../js_src/prettyprint.js';
 
 
 
@@ -12,7 +13,8 @@ program
   .description('Only parses and validates Dedalus source file')
   .argument('<path>', 'path to Dedalus source file')
   .action(async (filepath) => {
-    await validateFile(filepath);
+    const facts = await validateFile(filepath);
+    console.log(prettyPrintFacts(facts));
   });
 
 program
