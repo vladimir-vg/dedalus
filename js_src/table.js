@@ -78,6 +78,86 @@ const joinTables = (table1, table2) => {
 
 
 
+const extractPairFromCondition = (cond) => {
+  const [a, op, b] = cond;
+
+  if (op !== '=') {
+    return null;
+  }
+
+  const isVarA = typeof a === 'string';
+  const isVarB = typeof b === 'string';
+  if (isVarA && !isVarB) {
+    return [a, b];
+  }
+  if (!isVarA && isVarB) {
+    return [b, a];
+  }
+  return null;
+};
+
+const newColumnsFromConditions = (columns, conditions0) => {
+  // Find first expression Var = value1, when Var is not among columns
+  // and select it for a new value.
+  //
+  // If we have several occurences for same Var, then second
+  // would be treated as predicate later. Would work alright.
+
+  const conditions = [];
+  const pairs = [];
+  conditions0.forEach(cond => {
+    const pair = extractPairFromCondition(cond);
+    if (!pair) {
+      conditions.push(cond);
+      return;
+    }
+
+    if (columns.includes(pair[0])) {
+      // already have this var name as column, keep it as condition
+      conditions.push(cond);
+      return;
+    }
+    
+    const [addedColumns, _vals] = _.unzip(pairs);
+    if (addedColumns.includes(pair[0])) {
+      // already have this var name as new column, keep it as condition
+      conditions.push(cond);
+      return;
+    }
+
+    // otherwise, add it as new pair
+    // and do not add to list of conditions
+    pairs.push(pair);
+  });
+
+  return { pairs, conditions };
+};
+
+
+
+const constructRowPredicate = (columns, cond) => {
+  const [a, op, b] = cond;
+  const isVarA = typeof a === 'string';
+  const isVarB = typeof b === 'string';
+
+  return (row) => {
+    const aValue = isVarA ? row[columns.indexOf(a)] : a;
+    const bValue = isVarB ? row[columns.indexOf(b)] : b;
+    switch (op) {
+      case '=': return _.isEqual(aValue, bValue);
+      case '=/=': return !_.isEqual(aValue, bValue);
+      default: throw new Error(`Unknown operator: ${op}`);
+    }
+  };
+};
+
+const constructPredicate = (columns, conditions) => {
+  const predicates = conditions.map(cond => constructRowPredicate(columns, cond));
+  return (row) => _.every(predicates, p => p(row));
+};
+
+
+
 class Table {
   // we take certain fact name and map it according to variables
   static fromFacts(facts, key, params) {
@@ -87,33 +167,58 @@ class Table {
     }
 
     const { rows, columns } = projectFactsToRows(facts.get(key), params);
-    const t = new Table();
-    t.rows = rows;
-    t.columns = columns;
-    return t;
+    return new Table(columns, rows);
   }
 
-  constructor() {
-    this.columns = [];
-    this.rows = [];
+  constructor(columns = [], rows = []) {
+    this.columns = columns;
+    this.rows = rows;
   }
 
+  // natural join
   join(table2) {
     const { rows, columns } = joinTables(this, table2);
-    const t = new Table();
-    t.rows = rows;
-    t.columns = columns;
-    return t;
+    return new Table(columns, rows);
+  }
+
+  // if two tables don't have any shared column names,
+  // then join works as cross product
+  crossProduct(table2) {
+    if (_.some(this.columns, col => table2.columns.includes(col))) {
+      throw new Error(`Tables should not have shared columns for cross-product`);
+    }
+
+    return this.join(table2);
   }
 
   projectColumns(columns) {
-    // TODO: select only given columns, remove duplicates
+    if (_.some(columns, name => !this.columns.includes(name))) {
+      // we are requested project a column name that is not present
+      throw new Error(`Unexpected columns to project ${JSON.stringify(columns)} from ${JSON.stringify(this.columns)}`);
+    }
+    const rows1 = this.rows.forEach(row => {
+      const pairs = projectRowValues(row, this.columns, columns);
+      const [_cols, values] = _.unzip(pairs);
+      return values;
+    });
+    const rows = _.uniqWith(rows1, _.isEqual);
+    return new Table(columns, rows)
   }
 
-  select(conditions) {
-    // TODO: filter out rows, according to = and =/= operations
-    // if Var1 = 'value', where Var1 is not present among columns
-    // then add Var1 as column, with 'value' everywhere.
+  select(conditions0) {
+    const { pairs, conditions: conditions1 } = newColumnsFromConditions(this.columns, conditions0);
+
+    // create table that has only one row
+    // with all values that must be added to each row
+    // we just crossproduct it with filtered rows
+    const [newCols, newVals] = _.unzip(pairs);
+    const newValsTable = new Table(newCols, [newVals]);
+
+    const t = this.crossProduct(newValsTable);
+
+    const predicate = constructPredicate(t.columns, conditions1);
+    const filteredRows = t.rows.filter(predicate);
+    return new Table(t.columns, filteredRows);
   }
 }
 
