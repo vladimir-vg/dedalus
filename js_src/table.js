@@ -16,8 +16,9 @@ const projectFactsToRows = (tuples, params) => {
   const comparisonIndexes = params1
     .map((e, index) => index)
     .filter(index => typeof params1[index] !== 'string');
-
+// if (columns.length == 0) debugger
   tuples.forEach(tuple => {
+
     const matchesConstValues = _.every(comparisonIndexes, index =>
       _.isEqual(tuple[index], params1[index]));
     if (!matchesConstValues) { return; }
@@ -46,18 +47,23 @@ const projectFactsToRows = (tuples, params) => {
 
 const projectRowValues = (values, columns, selectedColumns) => {
   return selectedColumns.map(colname => {
-    const index = columns.indexOf(columns);
+    const index = columns.indexOf(colname);
     const value = values[index];
     return [colname, value];
   });
 };
 
 const joinTables = (table1, table2) => {
+  // if (table2.rows.length === 0) {
+  //   return table1;
+  // }
+
   const sharedColumns = _.intersection(table1.columns, table2.columns);
-  const columnsToAdd = _.without(table2.columns, sharedColumns);
+  const columnsToAdd = table2.columns.filter(col => !sharedColumns.includes(col));
   const columns = [...table1.columns, ...columnsToAdd];
   const sharedRows = [];
 
+  // if (sharedColumns.length === 0 && columnsToAdd.length == 0) debugger;
   // just walk rows in first table, extract values for shared columns
   // find all rows in second table that match that
   table1.rows.forEach(row1 => {
@@ -66,13 +72,21 @@ const joinTables = (table1, table2) => {
       const sharedPairs2 = projectRowValues(row2, table2.columns, sharedColumns);
       if (_.isEqual(sharedPairs1, sharedPairs2)) {
         const pairsToAdd = projectRowValues(row2, table2.columns, columnsToAdd);
-        const [_cols, rowValues] = _.unzip(pairsToAdd);
-        sharedRows.push([...row1, ...rowValues]);
+        if (pairsToAdd.length !== 0) {
+          const [_cols, rowValues] = _.unzip(pairsToAdd);
+          sharedRows.push([...row1, ...rowValues]);
+        } else {
+          // if we have new columns, table2 works as a filter for table2
+          // table2 also may have just single empty row
+          // in that case, just keep values from table1
+          sharedRows.push(row1);
+        }
       }
     });
   });
 
   const rows = _.uniqWith(sharedRows, _.isEqual);
+
   return { columns, rows };
 };
 
@@ -118,11 +132,13 @@ const newColumnsFromConditions = (columns, conditions0) => {
       return;
     }
     
-    const [addedColumns, _vals] = _.unzip(pairs);
-    if (addedColumns.includes(pair[0])) {
-      // already have this var name as new column, keep it as condition
-      conditions.push(cond);
-      return;
+    if (pairs.length !== 0) {
+      const [addedColumns, _vals] = _.unzip(pairs);
+      if (addedColumns.includes(pair[0])) {
+        // already have this var name as new column, keep it as condition
+        conditions.push(cond);
+        return;
+      }
     }
 
     // otherwise, add it as new pair
@@ -143,6 +159,7 @@ const constructRowPredicate = (columns, cond) => {
   return (row) => {
     const aValue = isVarA ? row[columns.indexOf(a)] : a;
     const bValue = isVarB ? row[columns.indexOf(b)] : b;
+
     switch (op) {
       case '=': return _.isEqual(aValue, bValue);
       case '=/=': return !_.isEqual(aValue, bValue);
@@ -199,7 +216,7 @@ class Table {
       throw new Error(`Unexpected columns to project ${JSON.stringify(columns)} from ${JSON.stringify(this.columns)}`);
     }
 
-    const rows1 = this.rows.forEach(row => {
+    const rows1 = this.rows.map(row => {
       return columns.map(col => {
         if (typeof col === 'string') {
           return row[this.columns.indexOf(col)];
@@ -217,13 +234,19 @@ class Table {
     // create table that has only one row
     // with all values that must be added to each row
     // we just crossproduct it with filtered rows
-    const [newCols, newVals] = _.unzip(pairs);
-    const newValsTable = new Table(newCols, [newVals]);
+    let newValsTable = new Table([], [[]]);
+    // if there are no new columns, we still need to
+    // insert empty row, so join would keep everything as is
+    if (pairs.length !== 0) {
+      const [newCols, newVals] = _.unzip(pairs);
+      newValsTable = new Table(newCols, [newVals]);
+    }
 
     const t = this.crossProduct(newValsTable);
 
     const predicate = constructPredicate(t.columns, conditions1);
     const filteredRows = t.rows.filter(predicate);
+// debugger
     return new Table(t.columns, filteredRows);
   }
 }

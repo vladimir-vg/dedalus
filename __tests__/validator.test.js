@@ -5,7 +5,6 @@ import fs from 'fs/promises';
 import _ from 'lodash';
 
 import { validateFile, runDeductively, prettyPrintFacts } from '../js_src/index.js';
-// import { factsFromAst, clearLineNumbersFromAst } from '../js_src/ast.js';
 
 
 
@@ -28,21 +27,19 @@ test.each(testcases)('%s', async (name) => {
   const matcherText = await fs.readFile(matcherPath);
   const matchingFacts = await runDeductively(validationFacts, matcherText, `./validator/${name}.dedalus`);
 
-  console.log(prettyPrintFacts(matchingFacts));
-
   const testPassedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_passed/'));
   const testFailedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_failed/'));
 
   testPassedKeys.forEach(key => {
     const tuples = matchingFacts.get(key);
     if (tuples.length !== 0) {
-      console.log(prettyPrintFacts(new Map([key, tuples])));
+      console.log(prettyPrintFacts(new Map([[key, tuples]])));
     }
   });
   testFailedKeys.forEach(key => {
     const tuples = matchingFacts.get(key);
     if (tuples.length !== 0) {
-      console.log(prettyPrintFacts(new Map([key, tuples])));
+      console.log(prettyPrintFacts(new Map([[key, tuples]])));
     }
   });
 
@@ -56,12 +53,5 @@ test.each(testcases)('%s', async (name) => {
   
   expect(hasAtLeastOneFailure).toEqual(false);
   expect(hasAtLeastOnePass).toEqual(true);
-
-  // we expected to have test_passed facts to be present
-  // and test_failed to be absent
-
-  // const received = Object.fromEntries(wrapTable([...inputAstWithoutLines]));
-  // const expected = Object.fromEntries([...expectedFacts]);
-  // expect(received).toMatchObject(expected);
 });
 

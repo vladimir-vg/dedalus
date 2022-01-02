@@ -209,10 +209,10 @@ err_different_time_suffix_in_body(Filename, Line1, Line2) <-
 
 
 err_time_suffix_not_in_async_rule(Filename, Line, Name) <-
-  ast_clause(Filename, _Line, _Name, ClauseN, Suffix),
+  ast_clause(Filename, _Line, Name, ClauseN, Suffix),
   Suffix =/= '@async',
   ast_body_rule(Filename, Line, ClauseN, RuleN),
-  ast_body_fact_has_time_suffix(ClauseN, RuleN);
+  body_fact_has_time_suffix(ClauseN, RuleN);
 
 body_fact_has_time_suffix(ClauseN, RuleN) <-
   ast_body_fact_var_time(ClauseN, RuleN, _VarName);

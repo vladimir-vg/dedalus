@@ -55,15 +55,15 @@ const collectBodyFacts = (ast, clauseN) => {
     if (!bodyFact) { return; }
     const [_t1, _c1, _r1, name, _n] = bodyFact;
 
-    const valueCollector = (key) => ({
+    const valueCollector = (key, isVar) => ({
       key,
       keep: (row) => (row[1] == clauseN) && (row[2] == ruleN),
-      selectValue: (row) => row[4],
+      selectValue: (row) => isVar ? row[4]['symbol'] : row[4],
       selectIndex: (row) => row[3],
     });
 
     const params = collectValuesFromFacts(ast, [
-      valueCollector('ast_body_var_arg/5'),
+      valueCollector('ast_body_var_arg/5', true),
       valueCollector('ast_body_int_arg/4'),
       valueCollector('ast_body_str_arg/4'),
       valueCollector('ast_body_sym_arg/4'),
@@ -79,24 +79,24 @@ const collectBodyFacts = (ast, clauseN) => {
 const collectBodyConditions = (ast, clauseN) => {
   const items = [];
   (ast.get('ast_body_binop/3') ?? []).forEach(tuple => {
-    const [_t, clauseN1, _ruleN, op] = tuple;
+    const [_t, clauseN1, ruleN, op] = tuple;
     if (clauseN1 != clauseN) { return; }
 
-    const valueCollector = (key) => ({
+    const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[1] == clauseN),
-      selectValue: (row) => row[3],
-      selectIndex: (row) => row[2],
+      keep: (row) => (row[1] == clauseN) && (row[2] == ruleN),
+      selectValue: (row) => isVar ? row[4]['symbol'] : row[4],
+      selectIndex: (row) => row[3],
     });
 
     const params = collectValuesFromFacts(ast, [
-      valueCollector('ast_body_var_arg/5'),
+      valueCollector('ast_body_var_arg/5', true),
       valueCollector('ast_body_int_arg/4'),
       valueCollector('ast_body_str_arg/4'),
       valueCollector('ast_body_sym_arg/4'),
     ]);
-    
-    items.push([params[0], op, params[1]]);
+
+    items.push([params[0], op['symbol'], params[1]]);
   });
 
   return items;
@@ -109,15 +109,15 @@ const prepareDeductiveClauses = (ast) => {
     // we are interested only in deductive rules
     if (!_.isEqual(suffix, {symbol: 'none'})) { return; }
 
-    const valueCollector = (key) => ({
+    const valueCollector = (key, isVar) => ({
       key,
       keep: (row) => (row[1] == clauseN),
-      selectValue: (row) => row[3],
+      selectValue: (row) => isVar ? row[3]['symbol'] : row[3],
       selectIndex: (row) => row[2],
     });
 
     const params = collectValuesFromFacts(ast, [
-      valueCollector('ast_clause_var_arg/5'),
+      valueCollector('ast_clause_var_arg/5', true),
       valueCollector('ast_clause_int_arg/3'),
       valueCollector('ast_clause_str_arg/3'),
       valueCollector('ast_clause_sym_arg/3'),
@@ -145,8 +145,7 @@ const produceFactsUsingDeductiveRules = (timestamp, astRules, facts) => {
 
   return clauses.reduce((newFacts, clause) => {
     const { key, params, bodyFacts, bodyConditions } = clause;
-
-
+    if (key === 'err_time_suffix_not_in_async_rule/3') debugger;
     const tables = bodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
     const table0 = tables.reduce((t1, t2) => t1.join(t2));
     const table1 = table0.select(bodyConditions);
@@ -155,7 +154,12 @@ const produceFactsUsingDeductiveRules = (timestamp, astRules, facts) => {
     const params1 = [timestamp, ...params];
     const rows = table1.projectColumns(params1);
 
-    return mergeDeep(newFacts, { [key]: rows });
+    // remove rows that are already present
+    // so we would return only new facts
+    const newRows = rows.filter(row =>
+      !_.find(facts.get(key), row2 => _.isEqual(row, row2)))
+
+    return mergeDeep(newFacts, { [key]: newRows });
   }, new Map());
 };
 
@@ -193,12 +197,14 @@ class Interpreter {
   deductFacts() {
     let accumulatedFacts = new Map();
     let newTuplesCount = 0;
+
     do {
       const currentFacts = mergeDeep(this.upcomingTickFacts, accumulatedFacts);
       const newFacts = produceFactsUsingDeductiveRules(this.timestamp+1, this.rules, currentFacts);
       // console.log(this.upcomingTickFacts);
       accumulatedFacts = mergeDeep(accumulatedFacts, newFacts);
       newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
+      // debugger
     } while (newTuplesCount > 0);
     return mergeDeep(this.upcomingTickFacts, accumulatedFacts);
   }

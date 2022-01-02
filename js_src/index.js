@@ -33,25 +33,19 @@ const parseDedalus = async (dedalusText, filename) => {
 
 const runDeductively = async (facts, dedalusText, path) => {
   const ast = await parseDedalus(dedalusText, path);
-  
+
   // better to explicitly separate facts from rules
   // give interpreter only rules, provide facts from outside
   // this way it is less messy
   const rules = rulesFromAst(ast);
-  // debugger
   const initialTimestamp = getMinimalTimestamp(facts);
   const runtime = new Interpreter(initialTimestamp-1, rules);
-  // const timestamp = runtime.timestamp;
-  // const facts = factsFromAst(sourceAst, timestamp);
-
-  // console.log({ sourceAst });
 
   // if we have exactly same output as previous step
   // then we are stale, no need to run further
   runtime.insertFactsForNextTick(facts);
   const newFacts = runtime.deductFacts();
   return newFacts;
-  // console.log(newFacts);
 };
 
 

@@ -19,6 +19,11 @@ const prettyPrintFacts = (facts) => {
     const [name, _arity] = key.split('/');
     return tuples.map(row => {
       const [timestamp, ...args] = row;
+
+      if (args.length === 0) {
+        return `${name}@${timestamp};`;
+      }
+
       const args1 = args
         .map(prettyPrintValue)
         .reduce((acc, part) => acc.concat(`, ${part}`));

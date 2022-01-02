@@ -1,7 +1,7 @@
 test_passed <-
-  err_time_suffix_not_in_async_rule(_Filename, 1, rule1),
-  err_time_suffix_not_in_async_rule(_Filename, 4, rule2);
+  err_time_suffix_not_in_async_rule(_Filename, 2, rule1),
+  err_time_suffix_not_in_async_rule(_Filename, 5, rule2);
 
 test_failed <-
   % not supposed to have this error for @async
-  err_time_suffix_not_in_async_rule(_Filename, 7, rule3);
+  err_time_suffix_not_in_async_rule(_Filename, 8, rule3);
