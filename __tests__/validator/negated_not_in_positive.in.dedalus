@@ -1,0 +1,5 @@
+foo(A, B, C) <-
+  bar(A, B),
+  % variables D and  C are not present in positive
+  % atoms of the body
+  not baz(D, B, C);

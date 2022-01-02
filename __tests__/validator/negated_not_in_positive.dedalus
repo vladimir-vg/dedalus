@@ -1,0 +1,6 @@
+test_passed <-
+  err_negated_not_in_positive(_Filename, 5, 'D'),
+  err_negated_not_in_positive(_Filename, 5, 'C');
+
+test_failed <-
+  err_negated_not_in_positive(_Filename, 5, 'B');

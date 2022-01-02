@@ -208,7 +208,7 @@ err_different_time_suffix_in_body(Filename, Line1, Line2) <-
 
 
 
-err_time_suffix_not_in_async_rule(Filename, Line) <-
+err_time_suffix_not_in_async_rule(Filename, Line, Name) <-
   ast_clause(Filename, _Line, _Name, ClauseN, Suffix),
   Suffix =/= '@async',
   ast_body_rule(Filename, Line, ClauseN, RuleN),
@@ -222,7 +222,9 @@ body_fact_has_time_suffix(ClauseN, RuleN) <-
 
 
 % negation
-% err_var_in_negation_not_present_in_positive(Filename, Line) <-
+% We don't support negation yet
+%
+% err_negated_not_in_positive(Filename, Line, VarName) <-
 %   ast_body_rule(Filename, Line, ClauseN, RuleN),
 %   ast_body_fact(ClauseN, RuleN, _Name, Negated),
 %   Negated = true,

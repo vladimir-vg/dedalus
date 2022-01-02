@@ -6,6 +6,7 @@ import peg from 'peggy';
 import {
   factsFromAst, tree2tables, getMinimalTimestamp, rulesFromAst
 } from './ast.js';
+import { prettyPrintFacts } from './prettyprint.js';
 
 import { Interpreter } from './interpreter.js';
 
@@ -30,17 +31,15 @@ const parseDedalus = async (dedalusText, filename) => {
 
 
 
-const validateFile = async (path) => {
-  const sourceDedalusText = await fs.readFile(path);
-  const sourceAst = await parseDedalus(sourceDedalusText, path);
-  const validatorDedalusText = await fs.readFile(validatorPath);
-  const validatorAst = await parseDedalus(validatorDedalusText, validatorPath);
+const runDeductively = async (facts, dedalusText, path) => {
+  const ast = await parseDedalus(dedalusText, path);
   
   // better to explicitly separate facts from rules
   // give interpreter only rules, provide facts from outside
   // this way it is less messy
-  const rules = rulesFromAst(validatorAst);
-  const initialTimestamp = getMinimalTimestamp(sourceAst);
+  const rules = rulesFromAst(ast);
+  // debugger
+  const initialTimestamp = getMinimalTimestamp(facts);
   const runtime = new Interpreter(initialTimestamp-1, rules);
   // const timestamp = runtime.timestamp;
   // const facts = factsFromAst(sourceAst, timestamp);
@@ -49,7 +48,7 @@ const validateFile = async (path) => {
 
   // if we have exactly same output as previous step
   // then we are stale, no need to run further
-  runtime.insertFactsForNextTick(sourceAst);
+  runtime.insertFactsForNextTick(facts);
   const newFacts = runtime.deductFacts();
   return newFacts;
   // console.log(newFacts);
@@ -57,8 +56,16 @@ const validateFile = async (path) => {
 
 
 
-const runFile = async (path) => {
-  const dedalusText = await fs.readFile(path);
+const validateFile = async (sourceDedalusText, path) => {
+  const sourceAst = await parseDedalus(sourceDedalusText, path);
+  const validatorDedalusText = await fs.readFile(validatorPath);
+
+  return await runDeductively(sourceAst, validatorDedalusText, validatorPath);
+};
+
+
+
+const runFile = (dedalusText, path) => {
   const tree = dedalusParser.parse(String(dedalusText));
   const ast = tree2tables(tree, path);
   // console.log(astTables.toJS());
@@ -95,4 +102,6 @@ export {
   parseDedalus,
   runFile,
   validateFile,
+  prettyPrintFacts,
+  runDeductively,
 }

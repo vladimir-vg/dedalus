@@ -1,0 +1,8 @@
+rule1(A, B, C) <-
+  atom1(A, B)@C;
+
+rule2(A, B, C)@next <-
+  atom2(A, B)@C;
+
+rule3(A, B, C)@async <-
+  atom3(A, B)@C;
