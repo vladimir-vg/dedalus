@@ -13,7 +13,7 @@
 
 
 
-% format of the facts that will describe Dedalus source
+% format of the atoms that will describe Dedalus source
 % that later will be used to correctness check, type inference
 % and transformation.
 %
@@ -42,7 +42,7 @@
 % ast_body_rule(Filename, Line, ClauseN, RuleN)
 
 % % Op == '<', '>', '>=', ...
-% % expected to have two arg facts with ArgN=1 and ArgN=2
+% % expected to have two arg atoms with ArgN=1 and ArgN=2
 % ast_body_binop(ClauseN, RuleN, Op)
 
 produced_value(ClauseN, RuleN, Name) <-
@@ -75,14 +75,14 @@ produced_value(ClauseN, RuleN, Name) <-
 % err_successor_used_as_rule_name
 % err_choose_used_as_rule_name
 
-% rule was used in body, however, no fact, to rules that
+% rule was used in body, however, no atom, to rules that
 % would produce it exist. Body would be always false
 % err_unknown_rule_in_body
 
 % range_restricted
 
 % This rule is not correct, since B is not range restricted,
-% going to produce infinite number of facts:
+% going to produce infinite number of atoms:
 %
 % p(A, B) <- q(A);
 %
@@ -103,7 +103,7 @@ produced_value(ClauseN, RuleN, Name) <-
 % Assuming that q(A, B) and q(D, E) are range-restricted rules
 %
 % err_both_vars_in_successor_not_present_in_range_restricted_rule(File, Line) <-
-%   body_fact(ClauseN, RuleN, successor, false),
+%   body_atom(ClauseN, RuleN, successor, false),
 %   body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix),
 %   not range_restricted_var(ClauseN, RuleN, VarName);
 
@@ -111,7 +111,7 @@ produced_value(ClauseN, RuleN, Name) <-
 
 range_restricted_rule(Name, Arity) <-
   % if there are no clauses with given name/arity
-  % then we assume that this rule must be defined as a fact
+  % then we assume that this rule must be defined as a atom
   % and is range-restricted
   number_of_clauses(Name, Arity, 0);
 range_restricted_rule(Name, Arity) <-
@@ -130,7 +130,7 @@ range_restricted_rule(Name, Arity) <-
 %   todo;
 
 % if we have several arities for same name
-% this would produce several facts
+% this would produce several atoms
 % clause_arity(Name, ClauseN, count<ArgN>) <-
 %   ast_clause(_Filename, _Line, Name, ClauseN, _Suffix),
 %   ast_clause_arg_number(ClauseN, ArgN);
@@ -245,7 +245,7 @@ var_present_in_positive_rule(ClauseN, VarName) <-
 % At first I thought about introducing concat<Name> aggregation function
 % but it implies order, which we don't have
 %
-% Another idea: use some kind of random_string() facts
+% Another idea: use some kind of random_string() atoms
 % and choose from deterministically. But I can't do that,
 % since I don't have choose rule yet, I am trying to implement it.
 %

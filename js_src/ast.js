@@ -51,15 +51,15 @@ const mergeDeep = (facts, addition) => {
 
 
 
-const transformAtom = (tables, item, factN, filename) => {
+const transformAtom = (tables, item, atomN, filename) => {
   const { line, name, time, args } = item['Atom'];
 
   const intArgs = [];
   const symArgs = [];
   const strArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [AST_TIMESTAMP, factN, argN, arg];
-    if (isSymbol(arg)) { symArgs.push([AST_TIMESTAMP, factN, argN, argToSymbol(arg)]); }
+    const tuple = [AST_TIMESTAMP, atomN, argN, arg];
+    if (isSymbol(arg)) { symArgs.push([AST_TIMESTAMP, atomN, argN, argToSymbol(arg)]); }
     else if (isInteger(arg)) { intArgs.push(tuple); }
     else if (isString(arg)) { strArgs.push(tuple); }
     else {
@@ -69,7 +69,7 @@ const transformAtom = (tables, item, factN, filename) => {
 
   return mergeDeep(tables, {
     'ast_atom/5': [
-      [AST_TIMESTAMP, filename, line, {symbol: name}, factN, time]
+      [AST_TIMESTAMP, filename, line, {symbol: name}, atomN, time]
     ],
     'ast_atom_int_arg/3': intArgs,
     'ast_atom_sym_arg/3': symArgs,
@@ -287,7 +287,7 @@ const factsFromAst = (ast, timestamp) => {
   (ast.get('ast_atom/5') ?? [])
     .filter(fTuple => fTuple[0] == timestamp)
     .forEach(fTuple => {
-      const [_timestamp, _fname, _line, name, factN, sourceTimestamp] = fTuple;
+      const [_timestamp, _fname, _line, name, atomN, sourceTimestamp] = fTuple;
 
       // now let's find all arguments and insert them into array
       const resultTuple = [sourceTimestamp]; // first element is timestamp
@@ -295,10 +295,10 @@ const factsFromAst = (ast, timestamp) => {
       const argNames = ['ast_atom_sym_arg/3', 'ast_atom_int_arg/3', 'ast_atom_str_arg/3'];
       argNames.forEach(name => {
         ast.get(name)
-          .filter(([t, factN1, n, val]) =>
-            (t == timestamp) && (factN1 == factN))
+          .filter(([t, atomN1, n, val]) =>
+            (t == timestamp) && (atomN1 == atomN))
           .forEach(aTuple => {
-            const [_t, _factN, n, val] = aTuple;
+            const [_t, _atomN, n, val] = aTuple;
             resultTuple[n+1] = val;
           });
       });
@@ -306,7 +306,7 @@ const factsFromAst = (ast, timestamp) => {
       // just to make sure that there weren't any gaps in arguments entries.
       for (let i=0; i<resultTuple.length; i++) {
         if (resultTuple[i] === undefined) {
-          throw new Error(`got empty value at ${i} for ${factN}th ${name}`);
+          throw new Error(`got empty value at ${i} for ${atomN}th ${name}`);
         }
       }
 
