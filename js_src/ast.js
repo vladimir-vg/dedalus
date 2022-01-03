@@ -51,8 +51,8 @@ const mergeDeep = (facts, addition) => {
 
 
 
-const transformFact = (tables, item, factN, filename) => {
-  const { line, name, time, args } = item['Fact'];
+const transformAtom = (tables, item, factN, filename) => {
+  const { line, name, time, args } = item['Atom'];
 
   const intArgs = [];
   const symArgs = [];
@@ -68,19 +68,19 @@ const transformFact = (tables, item, factN, filename) => {
   });
 
   return mergeDeep(tables, {
-    'ast_fact/5': [
+    'ast_atom/5': [
       [AST_TIMESTAMP, filename, line, {symbol: name}, factN, time]
     ],
-    'ast_fact_int_arg/3': intArgs,
-    'ast_fact_sym_arg/3': symArgs,
-    'ast_fact_str_arg/3': strArgs,
+    'ast_atom_int_arg/3': intArgs,
+    'ast_atom_sym_arg/3': symArgs,
+    'ast_atom_str_arg/3': strArgs,
   });
 };
 
 
 
-const transformFactCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
-  const { negated, name, args, time, line } = bodyRule['FactCondition'];
+const transformAtomCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
+  const { negated, name, args, time, line } = bodyRule['AtomCondition'];
   const intTime = [];
   const varTime = [];
   if (isVariable(time)) {
@@ -114,11 +114,11 @@ const transformFactCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
     'ast_body_rule/4': [
       [AST_TIMESTAMP, filename, line, clauseN, ruleN]
     ],
-    'ast_body_fact/4': [
+    'ast_body_atom/4': [
       [AST_TIMESTAMP, clauseN, ruleN, argToSymbol(name), boolToSymbol(negated)]
     ],
-    'ast_body_fact_var_time/3': varTime,
-    'ast_body_fact_int_time/3': intTime,
+    'ast_body_atom_var_time/3': varTime,
+    'ast_body_atom_int_time/3': intTime,
     'ast_body_var_arg/5': varArgs,
     'ast_body_int_arg/4': intArgs,
     'ast_body_sym_arg/4': symArgs,
@@ -128,8 +128,8 @@ const transformFactCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
 
 
 
-const transformOperatorCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
-  const { left, right, op, line } = bodyRule['OperatorCondition'];
+const transformBinaryPredicateCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
+  const { left, right, op, line } = bodyRule['BinaryPredicateCondition'];
 
   const varArgs = [];
   const intArgs = [];
@@ -185,15 +185,15 @@ const transformChooseCondition = (tables, bodyRule, clauseN, ruleN, filename) =>
 
 
 const transformBodyRule = (tables, bodyRule, clauseN, ruleN, filename) => {
-  if ('FactCondition' in bodyRule) {
-    return transformFactCondition(tables, bodyRule, clauseN, ruleN, filename);
-  } else if ('OperatorCondition' in bodyRule) {
-    return transformOperatorCondition(tables, bodyRule, clauseN, ruleN, filename);
+  if ('AtomCondition' in bodyRule) {
+    return transformAtomCondition(tables, bodyRule, clauseN, ruleN, filename);
+  } else if ('BinaryPredicateCondition' in bodyRule) {
+    return transformBinaryPredicateCondition(tables, bodyRule, clauseN, ruleN, filename);
   } else if ('ChooseCondition' in bodyRule) {
     return transformChooseCondition(tables, bodyRule, clauseN, ruleN, filename);
   }
 
-  throw new Error(`Unknown body rule item: ${bodyRule}`);
+  throw new Error(`Unknown body rule item: ${JSON.stringify(bodyRule)}`);
 };
 
 
@@ -243,8 +243,8 @@ const transformRule = (tables, item, clauseN, filename) => {
 
 
 const transformItem = (tables, item, index, filename) => {
-  if (item['Fact']) {
-    return transformFact(tables, item, index, filename);
+  if (item['Atom']) {
+    return transformAtom(tables, item, index, filename);
   } else if (item['Rule']) {
     return transformRule(tables, item, index, filename);
   }
@@ -276,15 +276,15 @@ const factsFromAst = (ast, timestamp) => {
   // we need to walk following facts
   // and assemble facts that they are describing:
   //
-  // ast_fact/5
-  // ast_fact_sym_arg/3
-  // ast_fact_int_arg/3
-  // ast_fact_str_arg/3
+  // ast_atom/5
+  // ast_atom_sym_arg/3
+  // ast_atom_int_arg/3
+  // ast_atom_str_arg/3
 
   // console.log({ ast })
 
   const output = {};
-  (ast.get('ast_fact/5') ?? [])
+  (ast.get('ast_atom/5') ?? [])
     .filter(fTuple => fTuple[0] == timestamp)
     .forEach(fTuple => {
       const [_timestamp, _fname, _line, name, factN, sourceTimestamp] = fTuple;
@@ -292,7 +292,7 @@ const factsFromAst = (ast, timestamp) => {
       // now let's find all arguments and insert them into array
       const resultTuple = [sourceTimestamp]; // first element is timestamp
 
-      const argNames = ['ast_fact_sym_arg/3', 'ast_fact_int_arg/3', 'ast_fact_str_arg/3'];
+      const argNames = ['ast_atom_sym_arg/3', 'ast_atom_int_arg/3', 'ast_atom_str_arg/3'];
       argNames.forEach(name => {
         ast.get(name)
           .filter(([t, factN1, n, val]) =>
@@ -331,7 +331,7 @@ const clearLineNumbersFromAst = (ast) => {
   };
   return new Map([...ast].map(([key, tuples]) => {
     switch (key) {
-      case 'ast_fact/5':
+      case 'ast_atom/5':
       case 'ast_clause/5':
       case 'ast_body_rule/4':
         return [key, tuples.map(clearLineNumber)];
@@ -344,17 +344,17 @@ const clearLineNumbersFromAst = (ast) => {
 
 
 const getMinimalTimestamp = (ast) => {
-  const timestamps = (ast.get('ast_fact/5') ?? []).map(tuple => tuple[0]);
+  const timestamps = (ast.get('ast_atom/5') ?? []).map(tuple => tuple[0]);
   return timestamps.reduce(Math.min, 0);
 };
 
 const rulesFromAst = (ast) => {
   return new Map([...ast].filter(([key, tuples]) => {
     switch (key) {
-      case 'ast_fact/5':
-      case 'ast_fact_sym_arg/3':
-      case 'ast_fact_int_arg/3':
-      case 'ast_fact_str_arg/3':
+      case 'ast_atom/5':
+      case 'ast_atom_sym_arg/3':
+      case 'ast_atom_int_arg/3':
+      case 'ast_atom_str_arg/3':
         return false;
       default:
         return true;

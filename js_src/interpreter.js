@@ -6,7 +6,7 @@ import { Table } from './table.js';
 
 
 const findLineWithNegation = (rules) => {
-  const tuples1 = rules.get('ast_body_fact/4');
+  const tuples1 = rules.get('ast_body_atom/4');
   const bodyFact = _.find(tuples1, tuple => {
     const [_timestamp0, _clauseN0, _ruleN0, negated] = tuple;
     return _.isEqual(negated, { symbol: 'true' });
@@ -46,7 +46,7 @@ const collectBodyFacts = (ast, clauseN) => {
     if (clauseN != clauseN1) { return; }
 
     const bodyFact = _.find(
-        (ast.get('ast_body_fact/4') ?? []),
+        (ast.get('ast_body_atom/4') ?? []),
         (fTuple) => {
           const [_t, clauseN2, ruleN2, _name, _n] = fTuple;
           return (clauseN2 == clauseN) && (ruleN == ruleN2);

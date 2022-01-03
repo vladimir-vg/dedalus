@@ -3,13 +3,13 @@ Top = items:ToplevelItem* {
 	return items.filter(function (x) { return x != null; });
 }
 
-ToplevelItem = ToSkip / Fact / Rule
+ToplevelItem = ToSkip / Atom / Rule
 
 ToSkip
 	= (Comment / WhiteSpace)+ { return null; }
 
 Rule "rule" = RuleWithBody / RuleWithoutBody
-RuleWithBody = head:RuleHead suffix: SuffixAndArrow ToSkip? body:RuleBody WhiteSpace? ";" {
+RuleWithBody = head:RuleHead suffix:SuffixAndArrow ToSkip? body:RuleBody WhiteSpace? ";" {
 	return {
     	Rule: {
     		name: head['name'], args: head['args'],
@@ -38,7 +38,7 @@ RuleHeadWithArgs = name:Symbol "(" WhiteSpace? args:HeadArguments WhiteSpace? ")
 RuleBody
 	= cond:RuleCondition WhiteSpace? "," ToSkip? rest:RuleBody { return [cond].concat(rest); }
 	/ cond:RuleCondition { return [cond]; }
-RuleCondition = ChooseCondition / FactCondition / OperatorCondition
+RuleCondition = ChooseCondition / AtomCondition / BinaryPredicateCondition
 
 ChooseCondition
 	= "choose(" WhiteSpace? "(" keyvars:VarList ")" WhiteSpace? ","
@@ -51,49 +51,49 @@ VarList = var1:VariableWithoutLocPrefix WhiteSpace? "," WhiteSpace? rest:VarList
 		  }
 		/ var1:VariableWithoutLocPrefix { return [var1]; }
 
-OperatorCondition = left:Value WhiteSpace? op:Operator WhiteSpace? right:Value {
+BinaryPredicateCondition = left:Value WhiteSpace? op:Operator WhiteSpace? right:Value {
 	const line = location().start.line;
-    return { OperatorCondition: {left: left, op: op, right: right, line: line} };
+    return { BinaryPredicateCondition: {left: left, op: op, right: right, line: line} };
 }
 
-FactCondition
-	= "not" WhiteSpace fact:FactCondition1 {
+AtomCondition
+	= "not" WhiteSpace atom:AtomCondition1 {
     	const line = location().start.line;
     	return {
-        FactCondition: { ...fact['FactCondition'], negated: true, line: line }
+        AtomCondition: { ...atom['AtomCondition'], negated: true, line: line }
       };
     }
-    / fact:FactCondition1 {
+    / atom:AtomCondition1 {
     	const line = location().start.line;
     	return {
-        FactCondition: { ...fact['FactCondition'], negated: false, line: line }
+        AtomCondition: { ...atom['AtomCondition'], negated: false, line: line }
       };
     }
-FactCondition1
+AtomCondition1
 	= name:Symbol "(" args:BodyArguments ")" "@" time:IntegerValue {
-    	return { FactCondition: { name: name, args: args, time: time } };
+    	return { AtomCondition: { name: name, args: args, time: time } };
     }
     / name:Symbol "(" args:BodyArguments ")" {
-    	return { FactCondition: { name: name, args: args, time: null } };
+    	return { AtomCondition: { name: name, args: args, time: null } };
     }
     / name:Symbol "@" time:IntegerValue {
-    	return { FactCondition: { name: name, args: [], time: time } };
+    	return { AtomCondition: { name: name, args: [], time: time } };
     }
     / name:Symbol {
-    	return { FactCondition: { name: name, args: [], time: null } };
+    	return { AtomCondition: { name: name, args: [], time: null } };
     }
 
 
-Fact "fact" = FactWithArgs / FactWithoutArgs
-FactWithoutArgs
+Atom "Atom" = AtomWithArgs / AtomWithoutArgs
+AtomWithoutArgs
 	= name:Symbol "@" time:Integer WhiteSpace? ";" {
-    	return { Fact: { name: name['symbol'], args: [], time: time, line: location().start.line } }
+    	return { Atom: { name: name['symbol'], args: [], time: time, line: location().start.line } }
     }
-FactWithArgs
+AtomWithArgs
 	= name:Symbol "("  WhiteSpace? args:ConstArguments WhiteSpace? ")"
       "@" time:Integer WhiteSpace? ";" {
       	const args1 = args.filter(function (x) { return x != null; });
-    	return { Fact: {name: name['symbol'], args: args1, time: time, line: location().start.line } };
+    	return { Atom: {name: name['symbol'], args: args1, time: time, line: location().start.line } };
     }
 
 HeadArguments
