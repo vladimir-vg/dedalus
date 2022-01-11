@@ -9,21 +9,20 @@ const projectFactsToRows = (tuples, params) => {
   const columns = _.uniq(params.filter(v =>
     (typeof v == 'string') && (v[0] !== '_')));
   const rows1 = [];
-  const params1 = ['_', ...params];
 
   // if param is string, then assume it to be a variable name
   // anything else is value that we need to compare against row fields
-  const comparisonIndexes = params1
+  const comparisonIndexes = params
     .map((e, index) => index)
-    .filter(index => typeof params1[index] !== 'string');
+    .filter(index => typeof params[index] !== 'string');
 // if (columns.length == 0) debugger
   tuples.forEach(tuple => {
 
     const matchesConstValues = _.every(comparisonIndexes, index =>
-      _.isEqual(tuple[index], params1[index]));
+      _.isEqual(tuple[index], params[index]));
     if (!matchesConstValues) { return; }
 
-    const pairs =  _.uniqWith(_.zip(params1, tuple), _.isEqual);
+    const pairs =  _.uniqWith(_.zip(params, tuple), _.isEqual);
     const row = columns.map(varname => {
       const pairs1 = pairs.filter(([varname1, _value]) => varname1 == varname);
       // if we have exactly one value, then we are good

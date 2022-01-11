@@ -15,21 +15,26 @@ const prettyPrintValue = (value) => {
 };
 
 const prettyPrintFacts = (facts) => {
-  const lines = [...facts.entries()].flatMap(([key, tuples]) => {
-    const [name, _arity] = key.split('/');
-    return tuples.map(row => {
-      const [timestamp, ...args] = row;
-
-      if (args.length === 0) {
-        return `${name}@${timestamp};`;
-      }
-
-      const args1 = args
-        .map(prettyPrintValue)
-        .reduce((acc, part) => acc.concat(`, ${part}`));
-      return `${name}(${args1})@${timestamp};`;
+  const lines = [...facts].flatMap(([timestamp, tupleMap]) => {
+    return [...tupleMap].flatMap(([key, tuples]) => {
+      debugger
+      const [name, _arity] = key.split('/');
+      return tuples.map(args => {
+        if (args.length === 0) {
+          return `${name}@${timestamp};`;
+        }
+  
+        const args1 = args
+          .map(prettyPrintValue)
+          .reduce((acc, part) => acc.concat(`, ${part}`));
+        return `${name}(${args1})@${timestamp};`;
+      });
     });
   });
+
+  if (lines.length === 0) {
+    return '';
+  }
 
   return lines.reduce((acc, line) => acc.concat(`\n${line}`));
 };

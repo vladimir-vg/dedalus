@@ -25,7 +25,8 @@ program
   .argument('<path>', 'path to Dedalus source file')
   .action(async (filepath) => {
     const dedalusText = await fs.readFile(filepath);
-    runFile(dedalusText, filepath)
+    const facts = await runFile(dedalusText, filepath);
+    console.log(prettyPrintFacts(facts));
   });
 
 program.parse(process.argv);

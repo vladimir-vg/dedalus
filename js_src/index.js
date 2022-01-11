@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import peg from 'peggy';
 
 import {
-  factsFromAst, tree2tables, getMinimalTimestamp, rulesFromAst
+  sourceFactsFromAstFacts, tree2facts, rulesFromAstFacts, mergeFactsDeep
 } from './ast.js';
 import { prettyPrintFacts } from './prettyprint.js';
 
@@ -25,27 +25,27 @@ const parseDedalus = async (dedalusText, filename) => {
   const dedalusParser = peg.generate(String(grammarText));
 
   const tree = dedalusParser.parse(String(dedalusText));
-  const astTables = tree2tables(tree, filename);
-  return astTables;
+  const astFacts = tree2facts(tree, filename);
+  return astFacts;
 };
 
 
 
-const runDeductively = async (facts, dedalusText, path) => {
-  const ast = await parseDedalus(dedalusText, path);
+const runDeductively = async (inputFacts, dedalusText, path) => {
+  const astFacts = await parseDedalus(dedalusText, path);
 
   // better to explicitly separate facts from rules
   // give interpreter only rules, provide facts from outside
   // this way it is less messy
-  const rules = rulesFromAst(ast);
-  const initialTimestamp = getMinimalTimestamp(facts);
+  const rules = rulesFromAstFacts(astFacts);
+  const factsFromSource = sourceFactsFromAstFacts(astFacts);
+  const facts = mergeFactsDeep(inputFacts, factsFromSource);
+  const initialTimestamp = [...facts.keys()].reduce((t1, t2) => Math.min(t1,t2), 1);
   const runtime = new Interpreter(initialTimestamp-1, rules);
 
-  // if we have exactly same output as previous step
-  // then we are stale, no need to run further
-  runtime.insertFactsForNextTick(facts);
+  runtime.insertFactsForNextTick(facts.get(initialTimestamp));
   const newFacts = runtime.deductFacts();
-  return newFacts;
+  return (new Map([[initialTimestamp, newFacts]]));
 };
 
 
@@ -59,35 +59,53 @@ const validateFile = async (sourceDedalusText, path) => {
 
 
 
-const runFile = (dedalusText, path) => {
-  const tree = dedalusParser.parse(String(dedalusText));
-  const ast = tree2tables(tree, path);
-  // console.log(astTables.toJS());
+const runFile = async (dedalusText, path) => {
+  const astFacts = await parseDedalus(dedalusText, path);
 
-  const initialTimestamp = getMinimalTimestamp(ast);
+  const facts = sourceFactsFromAstFacts(astFacts);
+  const initialTimestamp = [...facts.keys()].reduce((t1, t2) => Math.min(t1,t2), 1);
+
   // better to explicitly separate facts from rules
   // give interpreter only rules, provide facts from outside
   // this way it is less messy
-  const rules = rulesFromAst(ast);
+  const rules = rulesFromAstFacts(astFacts);
+  // const initialTimestamp = getMinimalTimestamp(facts);
   const runtime = new Interpreter(initialTimestamp-1, rules);
 
   // if we have exactly same output as previous step
   // then we are stale, no need to run further
-  // do {
-    const timestamp = runtime.timestamp;
-    const facts = factsFromAst(ast, timestamp+1);
-    runtime.insertFactsForNextTick(facts);
-    // here we also could insert incoming event facts from other nodes
-    // runtime.insertFactsForNextTick(eventsFromOtherNodes);
+  runtime.insertFactsForNextTick(facts);
+  const newFacts = runtime.deductFacts();
+  return newFacts;
 
-    // compute all @next and @async rules, store computed facts
-    // return emitted @async facts to be delivered outside
-    const newFacts = runtime.deductFacts();
-    console.log(newFacts);
+  // const tree = dedalusParser.parse(String(dedalusText));
+  // const ast = tree2tables(tree, path);
+  // // console.log(astTables.toJS());
 
-    // TODO: add check, that no facts in AST left
-    // if there is still something, need to jump to that timestamp
-  // } while (!runtime.isStale());
+  // const initialTimestamp = getMinimalTimestamp(ast);
+  // // better to explicitly separate facts from rules
+  // // give interpreter only rules, provide facts from outside
+  // // this way it is less messy
+  // const rules = rulesFromAst(ast);
+  // const runtime = new Interpreter(initialTimestamp-1, rules);
+
+  // // if we have exactly same output as previous step
+  // // then we are stale, no need to run further
+  // // do {
+  //   const timestamp = runtime.timestamp;
+  //   const facts = factsFromAst(ast, timestamp+1);
+  //   runtime.insertFactsForNextTick(facts);
+  //   // here we also could insert incoming event facts from other nodes
+  //   // runtime.insertFactsForNextTick(eventsFromOtherNodes);
+
+  //   // compute all @next and @async rules, store computed facts
+  //   // return emitted @async facts to be delivered outside
+  //   const newFacts = runtime.deductFacts();
+  //   console.log(newFacts);
+
+  //   // TODO: add check, that no facts in AST left
+  //   // if there is still something, need to jump to that timestamp
+  // // } while (!runtime.isStale());
 };
 
 

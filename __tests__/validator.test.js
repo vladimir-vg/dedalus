@@ -26,30 +26,34 @@ test.each(testcases)('%s', async (name) => {
 
   const matcherText = await fs.readFile(matcherPath);
   const matchingFacts = await runDeductively(validationFacts, matcherText, `./validator/${name}.dedalus`);
+  const lastTimestamp = [...matchingFacts.keys()].reduce((t1, t2) => Math.max(t1,t2));
+  const tupleMap = matchingFacts.get(lastTimestamp);
+// console.log({ matchingFacts, lastTimestamp });
+  const testPassedKeys = [...tupleMap.keys()].filter(key => key.startsWith('test_passed/'));
+  const testFailedKeys = [...tupleMap.keys()].filter(key => key.startsWith('test_failed/'));
 
-  const testPassedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_passed/'));
-  const testFailedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_failed/'));
+  console.log(prettyPrintFacts(matchingFacts));
 
-  testPassedKeys.forEach(key => {
-    const tuples = matchingFacts.get(key);
-    if (tuples.length !== 0) {
-      console.log(prettyPrintFacts(new Map([[key, tuples]])));
-    }
-  });
-  testFailedKeys.forEach(key => {
-    const tuples = matchingFacts.get(key);
-    if (tuples.length !== 0) {
-      console.log(prettyPrintFacts(new Map([[key, tuples]])));
-    }
-  });
+  // testPassedKeys.forEach(key => {
+  //   const tuples = tupleMap.get(key);
+  //   if (tuples.length !== 0) {
+  //     console.log(prettyPrintFacts(tupleMap));
+  //   }
+  // });
+  // testFailedKeys.forEach(key => {
+  //   const tuples = tupleMap.get(key);
+  //   if (tuples.length !== 0) {
+  //     console.log(prettyPrintFacts(new Map([[key, tuples]])));
+  //   }
+  // });
 
   // if we have test_failed, then failed
   // if we don't have any test_passed, then also failed
   // otherwise passed
   const hasAtLeastOneFailure = _.some(testFailedKeys, key => 
-    matchingFacts.get(key).length !== 0);
+    tupleMap.get(key).length !== 0);
   const hasAtLeastOnePass = _.some(testPassedKeys, key => 
-    matchingFacts.get(key).length !== 0);
+    tupleMap.get(key).length !== 0);
   
   expect(hasAtLeastOneFailure).toEqual(false);
   expect(hasAtLeastOnePass).toEqual(true);

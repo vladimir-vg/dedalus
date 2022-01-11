@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import { mergeDeep } from './ast.js';
+import { mergeFactsDeep, mergeTupleMapDeep } from './ast.js';
 import { Table } from './table.js';
 
 
@@ -8,16 +8,16 @@ import { Table } from './table.js';
 const findLineWithNegation = (rules) => {
   const tuples1 = rules.get('ast_body_atom/4');
   const bodyFact = _.find(tuples1, tuple => {
-    const [_timestamp0, _clauseN0, _ruleN0, negated] = tuple;
+    const [_clauseN0, _ruleN0, negated] = tuple;
     return _.isEqual(negated, { symbol: 'true' });
   });
   if (!bodyFact) {
     return null;
   }
-  const [_timestamp1, clauseN, ruleN, _negated1] = bodyFact;
+  const [clauseN, ruleN, _negated1] = bodyFact;
   const tuples2 = rules.get('ast_body_rule/4');
-  const [_timestamp2, _filename2, line] = _.find(tuples2, tuple => {
-    const [_timestamp3, _filename3, _line3, clauseN1, ruleN1] = tuple;
+  const [_filename2, line] = _.find(tuples2, tuple => {
+    const [_filename3, _line3, clauseN1, ruleN1] = tuple;
     return (clauseN == clauseN1) && (ruleN == ruleN1);
   });
   return line;
@@ -42,24 +42,24 @@ const collectBodyFacts = (ast, clauseN) => {
   const items = [];
 
   (ast.get('ast_body_rule/4') ?? []).forEach(bTuple => {
-    const [_t, _f, _l,clauseN1, ruleN] = bTuple;
+    const [_f, _l,clauseN1, ruleN] = bTuple;
     if (clauseN != clauseN1) { return; }
 
     const bodyFact = _.find(
         (ast.get('ast_body_atom/4') ?? []),
         (fTuple) => {
-          const [_t, clauseN2, ruleN2, _name, _n] = fTuple;
+          const [clauseN2, ruleN2, _name, _n] = fTuple;
           return (clauseN2 == clauseN) && (ruleN == ruleN2);
         });
     
     if (!bodyFact) { return; }
-    const [_t1, _c1, _r1, name, _n] = bodyFact;
+    const [_c1, _r1, name, _n] = bodyFact;
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[1] == clauseN) && (row[2] == ruleN),
-      selectValue: (row) => isVar ? row[4]['symbol'] : row[4],
-      selectIndex: (row) => row[3],
+      keep: (row) => (row[0] == clauseN) && (row[1] == ruleN),
+      selectValue: (row) => isVar ? row[3]['symbol'] : row[3],
+      selectIndex: (row) => row[2],
     });
 
     const params = collectValuesFromFacts(ast, [
@@ -79,14 +79,14 @@ const collectBodyFacts = (ast, clauseN) => {
 const collectBodyConditions = (ast, clauseN) => {
   const items = [];
   (ast.get('ast_body_binop/3') ?? []).forEach(tuple => {
-    const [_t, clauseN1, ruleN, op] = tuple;
+    const [clauseN1, ruleN, op] = tuple;
     if (clauseN1 != clauseN) { return; }
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[1] == clauseN) && (row[2] == ruleN),
-      selectValue: (row) => isVar ? row[4]['symbol'] : row[4],
-      selectIndex: (row) => row[3],
+      keep: (row) => (row[0] == clauseN) && (row[1] == ruleN),
+      selectValue: (row) => isVar ? row[3]['symbol'] : row[3],
+      selectIndex: (row) => row[2],
     });
 
     const params = collectValuesFromFacts(ast, [
@@ -105,15 +105,15 @@ const collectBodyConditions = (ast, clauseN) => {
 const prepareDeductiveClauses = (ast) => {
   const clauses = [];
   (ast.get('ast_clause/5') ?? []).forEach(cTuple => {
-    const [_t, _f, _l, name, clauseN, suffix] = cTuple;
+    const [_f, _l, name, clauseN, suffix] = cTuple;
     // we are interested only in deductive rules
     if (!_.isEqual(suffix, {symbol: 'none'})) { return; }
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[1] == clauseN),
-      selectValue: (row) => isVar ? row[3]['symbol'] : row[3],
-      selectIndex: (row) => row[2],
+      keep: (row) => (row[0] == clauseN),
+      selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
+      selectIndex: (row) => row[1],
     });
 
     const params = collectValuesFromFacts(ast, [
@@ -134,32 +134,32 @@ const prepareDeductiveClauses = (ast) => {
 
 
 
-const produceFactsUsingDeductiveRules = (timestamp, astRules, facts) => {
+const produceFactsUsingDeductiveRules = (astRules, facts) => {
   // Just walk all inductive rules (not @async and not @next)
   // one by one and produce all possible new facts from given facts
 
   // collect all inductive rules
   // { key, params, bodyFacts: [{ key, params }, ...], bodyConditions: [[a, op, b], ...] }
   // conditions must come after facts in the body
+  
   const clauses = prepareDeductiveClauses(astRules);
 
   return clauses.reduce((newFacts, clause) => {
     const { key, params, bodyFacts, bodyConditions } = clause;
-    if (key === 'err_time_suffix_not_in_async_rule/3') debugger;
     const tables = bodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
     const table0 = tables.reduce((t1, t2) => t1.join(t2));
     const table1 = table0.select(bodyConditions);
 
-    // add timestamp constant ast first column
-    const params1 = [timestamp, ...params];
-    const rows = table1.projectColumns(params1);
+    const rows = table1.projectColumns(params);
 
     // remove rows that are already present
     // so we would return only new facts
     const newRows = rows.filter(row =>
       !_.find(facts.get(key), row2 => _.isEqual(row, row2)))
 
-    return mergeDeep(newFacts, { [key]: newRows });
+    const oldRows = newFacts.get(key) ?? [];
+    newFacts.set(key, [...oldRows, ...newRows]);
+    return newFacts;
   }, new Map());
 };
 
@@ -188,7 +188,7 @@ class Interpreter {
 
   insertFactsForNextTick(facts) {
     // console.log({ facts })
-    this.upcomingTickFacts = mergeDeep(this.upcomingTickFacts, facts);
+    this.upcomingTickFacts = mergeTupleMapDeep  (this.upcomingTickFacts, facts);
     // console.log(this.upcomingTickFacts);
   }
 
@@ -199,14 +199,16 @@ class Interpreter {
     let newTuplesCount = 0;
 
     do {
-      const currentFacts = mergeDeep(this.upcomingTickFacts, accumulatedFacts);
-      const newFacts = produceFactsUsingDeductiveRules(this.timestamp+1, this.rules, currentFacts);
-      // console.log(this.upcomingTickFacts);
-      accumulatedFacts = mergeDeep(accumulatedFacts, newFacts);
+      const currentFacts = mergeTupleMapDeep(this.upcomingTickFacts, accumulatedFacts);
+      const newFacts = produceFactsUsingDeductiveRules(this.rules, currentFacts);
+
+      accumulatedFacts = mergeTupleMapDeep(accumulatedFacts, newFacts);
+      
       newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
       // debugger
     } while (newTuplesCount > 0);
-    return mergeDeep(this.upcomingTickFacts, accumulatedFacts);
+    // debugger
+    return mergeTupleMapDeep(this.upcomingTickFacts, accumulatedFacts);
   }
 
   tick() {

@@ -33,3 +33,9 @@ Non-deterministic `choose` rule can be expressed in terms of negation and recurs
  4. [ ] Parser tests via input source code and output AST facts
  5. [ ] Testing system
 
+# Related projects
+
+ * [Eve](https://github.com/withEve)
+ * [Imp](https://github.com/jamii/imp)
+ * [Bud](https://github.com/bloom-lang/bud)
+ * [Overlog](https://github.com/bloom-lang/c4/)
