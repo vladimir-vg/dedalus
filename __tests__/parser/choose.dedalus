@@ -1,0 +1,31 @@
+test_passed <-
+  ast_atom("./parser/choose.in.dedalus", _, student, 0, 5),
+    ast_atom_sym_arg(0, 0, 'JimBlack'),
+    ast_atom_sym_arg(0, 1, ee),
+    ast_atom_sym_arg(0, 2, senior),
+
+  ast_atom("./parser/choose.in.dedalus", _, professor, 1, 5),
+    ast_atom_sym_arg(1, 0, ohm),
+    ast_atom_sym_arg(1, 1, ee),
+
+  ast_atom("./parser/choose.in.dedalus", _, professor, 2, 5),
+    ast_atom_sym_arg(2, 0, bell),
+    ast_atom_sym_arg(2, 1, ee),
+
+  ast_clause("./parser/choose.in.dedalus", _, elig_adv, 3, none),
+    ast_clause_var_arg(3, 0, 'S', none, false),
+    ast_clause_var_arg(3, 1, 'P', none, false),
+
+    ast_body_rule("./parser/choose.in.dedalus", _, 3, 0),
+    ast_body_atom(3, 0, student, false),
+      ast_body_var_arg(3, 0, 0, 'S', false),
+      ast_body_var_arg(3, 0, 1, 'Major', false),
+      ast_body_var_arg(3, 0, 2, '_Year', false),
+    ast_body_rule("./parser/choose.in.dedalus", _, 3, 1),
+    ast_body_atom(3, 1, professor, false),
+      ast_body_var_arg(3, 1, 0, 'P', false),
+      ast_body_var_arg(3, 1, 1, 'Major', false),
+    ast_body_rule("./parser/choose.in.dedalus", _, 3, 2),
+    ast_body_choose(3, 2),
+      ast_body_choose_key_var(3, 2, 0, 'S'),
+      ast_body_choose_row_var(3, 2, 0, 'P');

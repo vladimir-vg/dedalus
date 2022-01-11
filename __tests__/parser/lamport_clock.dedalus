@@ -1,0 +1,69 @@
+test_passed <-
+  ast_clause("./parser/lamport_clock.in.dedalus", _, p_pos, 0, none),
+    ast_clause_var_arg(0, 0, 'A', none, false),
+    ast_clause_var_arg(0, 1, 'B', none, false),
+
+    ast_body_rule("./parser/lamport_clock.in.dedalus", _, 0, 0),
+    ast_body_atom(0, 0, p, false),
+      ast_body_var_arg(0, 0, 0, 'A', false),
+      ast_body_var_arg(0, 0, 1, 'B', false),
+
+  ast_clause("./parser/lamport_clock.in.dedalus", _, p_pos, 1, '@next'),
+    ast_clause_var_arg(1, 0, 'A', none, false),
+    ast_clause_var_arg(1, 1, 'B', none, false),
+
+    ast_body_rule("./parser/lamport_clock.in.dedalus", _, 1, 0),
+    ast_body_atom(1, 0, p_pos, false),
+      ast_body_var_arg(1, 0, 0, 'A', false),
+      ast_body_var_arg(1, 0, 1, 'B', false),
+
+    ast_body_rule("./parser/lamport_clock.in.dedalus", _, 1, 1),
+    ast_body_atom(1, 1, p_neg, true),
+      ast_body_var_arg(1, 1, 0, 'A', false),
+      ast_body_var_arg(1, 1, 1, 'B', false),
+
+
+  ast_clause("./parser/lamport_clock.in.dedalus", _, p_wait, 2, '@async'),
+    ast_clause_var_arg(2, 0, 'A', none, false),
+    ast_clause_var_arg(2, 1, 'B', none, false),
+    ast_clause_var_arg(2, 2, 'N', none, false),
+
+    ast_body_rule("./parser/lamport_clock.in.dedalus", _, 2, 0),
+    ast_body_atom(2, 0, q, false),
+      ast_body_var_arg(2, 0, 0, 'A', false),
+      ast_body_var_arg(2, 0, 1, 'B', false),
+      ast_body_atom_var_time(2, 0, 'N'),
+
+  ast_clause("./parser/lamport_clock.in.dedalus", _, p_wait, 3, '@next'),
+    ast_clause_var_arg(3, 0, 'A', none, false),
+    ast_clause_var_arg(3, 1, 'B', none, false),
+    ast_clause_var_arg(3, 2, 'N', none, false),
+
+    ast_body_rule("./parser/lamport_clock.in.dedalus", _, 3, 0),
+    ast_body_atom(3, 0, p_wait, false),
+      ast_body_var_arg(3, 0, 0, 'A', false),
+      ast_body_var_arg(3, 0, 1, 'B', false),
+      ast_body_var_arg(3, 0, 2, 'N', false),
+      ast_body_atom_var_time(3, 0, 'M'),
+    
+    ast_body_rule("./parser/lamport_clock.in.dedalus", _, 3, 1),
+    ast_body_binop(3, 1, '>='),
+      ast_body_var_arg(3, 1, 0, 'N', false),
+      ast_body_var_arg(3, 1, 1, 'M', false),
+
+
+  ast_clause("./parser/lamport_clock.in.dedalus", _, p, 4, '@next'),
+    ast_clause_var_arg(4, 0, 'A', none, false),
+    ast_clause_var_arg(4, 1, 'B', none, false),
+
+    ast_body_rule("./parser/lamport_clock.in.dedalus", _, 4, 0),
+    ast_body_atom(4, 0, p_wait, false),
+      ast_body_var_arg(4, 0, 0, 'A', false),
+      ast_body_var_arg(4, 0, 1, 'B', false),
+      ast_body_var_arg(4, 0, 2, 'N', false),
+      ast_body_atom_var_time(4, 0, 'M'),
+    
+    ast_body_rule("./parser/lamport_clock.in.dedalus", _, 4, 1),
+    ast_body_binop(4, 1, '<'),
+      ast_body_var_arg(4, 1, 0, 'N', false),
+      ast_body_var_arg(4, 1, 1, 'M', false);

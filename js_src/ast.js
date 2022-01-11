@@ -326,79 +326,6 @@ const sourceFactsFromAstFacts = (astFacts) => {
 
 
 
-// // interprets ast, returns tables of facts
-// // that were specified in the source for given timestamp
-// const factsFromAst = (ast, timestamp) => {
-//   // we need to walk following facts
-//   // and assemble facts that they are describing:
-//   //
-//   // ast_atom/5
-//   // ast_atom_sym_arg/3
-//   // ast_atom_int_arg/3
-//   // ast_atom_str_arg/3
-
-//   // console.log({ ast })
-
-//   const output = {};
-//   (ast.get('ast_atom/5') ?? [])
-//     .filter(fTuple => fTuple[0] == timestamp)
-//     .forEach(fTuple => {
-//       const [_timestamp, _fname, _line, name, atomN, sourceTimestamp] = fTuple;
-
-//       // now let's find all arguments and insert them into array
-//       const resultTuple = [sourceTimestamp]; // first element is timestamp
-
-//       const argNames = ['ast_atom_sym_arg/3', 'ast_atom_int_arg/3', 'ast_atom_str_arg/3'];
-//       argNames.forEach(name => {
-//         (ast.get(name) ?? [])
-//           .filter(([t, atomN1, n, val]) =>
-//             (t == timestamp) && (atomN1 == atomN))
-//           .forEach(aTuple => {
-//             const [_t, _atomN, n, val] = aTuple;
-//             resultTuple[n+1] = val;
-//           });
-//       });
-
-//       // just to make sure that there weren't any gaps in arguments entries.
-//       for (let i=0; i<resultTuple.length; i++) {
-//         if (resultTuple[i] === undefined) {
-//           throw new Error(`got empty value at ${i} for ${atomN}th ${name}`);
-//         }
-//       }
-
-//       // at this point, we collected all values into resultTuple.
-//       const key = `${name.symbol}/${resultTuple.length-1}`;
-//       output[key] = (output[key] ?? []);
-//       output[key].push(resultTuple);
-//     });
-
-//   return mergeTupleMapDeep(new Map(), output);
-// }
-
-
-
-// // sets all information about line numbers and file source paths
-// // for easier comparison in test
-// const clearLineNumbersFromAst = (ast) => {
-//   const clearLineNumber = (tuple) => {
-//     const [t, filename, _line, ...rest] = tuple;
-//     const tuple1 = [t, filename, 0, ...rest];
-//     return tuple1;
-//   };
-//   return new Map([...ast].map(([key, tuples]) => {
-//     switch (key) {
-//       case 'ast_atom/5':
-//       case 'ast_clause/5':
-//       case 'ast_body_rule/4':
-//         return [key, tuples.map(clearLineNumber)];
-//       default:
-//         return [key, tuples];
-//     }
-//   }));
-// };
-
-
-
 const rulesFromAstFacts = (astFacts) => {
   const tupleMap = astFacts.get(AST_TIMESTAMP);
   const rulesTupleMap = new Map([...tupleMap].filter(([key, _tuples]) => {
@@ -422,6 +349,5 @@ export {
   mergeTupleMapDeep,
   tree2facts,
   sourceFactsFromAstFacts,
-  // clearLineNumbersFromAst,
   rulesFromAstFacts,
 }

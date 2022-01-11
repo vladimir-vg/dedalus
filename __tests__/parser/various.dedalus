@@ -1,0 +1,12 @@
+test_passed <-
+  ast_atom("./parser/various.in.dedalus", _, no_fields_fact, 0, 100),
+
+  ast_clause("./parser/various.in.dedalus", _, omin, 1, none),
+    ast_clause_var_arg(1, 0, 'A', none, false),
+    ast_clause_var_arg(1, 1, 'C', min, false),
+
+    ast_body_rule("./parser/various.in.dedalus", _, 1, 0),
+    ast_body_atom(1, 0, m_priority_queue, false),
+      ast_body_var_arg(1, 0, 0, 'A', false),
+      ast_body_var_arg(1, 0, 1, '_', false),
+      ast_body_var_arg(1, 0, 2, 'C', false);

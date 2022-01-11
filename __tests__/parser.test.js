@@ -3,20 +3,12 @@ import path from 'path';
 import fs from 'fs/promises';
 
 import { parseDedalus } from '../js_src/index.js';
-import { sourceFactsFromAstFacts } from '../js_src/ast.js';
+import { runDedalusTest } from './util.js';
 
 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-const wrapTable = (pairs) => {
-  return pairs.map(([key, tuplesMap]) => {
-    const tuplesMap1 = [...tuplesMap].map(
-      ([t, arr]) => [t, expect.arrayContaining(arr)]);
-    return [key, tuplesMap1];
-  });
-}
 
 
 
@@ -28,20 +20,15 @@ const testcases = [
 ];
 test.each(testcases)('%s', async (name) => {
   const inputPath = path.join(__dirname, `./parser/${name}.in.dedalus`);
-  const outputPath = path.join(__dirname, `./parser/${name}.out.dedalus`);
+  const matcherPath = path.join(__dirname, `./parser/${name}.dedalus`);
 
   const inputText = await fs.readFile(inputPath);
-  const outputText = await fs.readFile(outputPath);
-  const inputAst = await parseDedalus(inputText, `./parser/${name}.in.dedalus`);
-  const outputAst = await parseDedalus(outputText, `./parser/${name}.out.dedalus`);
-  // const inputAstWithoutLines = clearLineNumbersFromAst(inputAst);
-  const expectedFacts = sourceFactsFromAstFacts(outputAst, 0);   
+  const astFacts = await parseDedalus(inputText, `./parser/${name}.in.dedalus`);
 
-  // in order to match tables using jest, wrap all tuples
-  // with expect.arrayContaining, 
+  // now when we got results of validation,
+  // we need to supply them as facts and run the matcher code
 
-  const received = Object.fromEntries(wrapTable([...inputAst]));
-  const expected = Object.fromEntries([...expectedFacts]);
-  expect(received).toMatchObject(expected);
+  const matcherText = await fs.readFile(matcherPath);
+  await runDedalusTest(expect, astFacts, matcherText);
 });
 
