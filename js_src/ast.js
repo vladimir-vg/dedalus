@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import seedrandom from 'seedrandom';
 
 
 // timestamp that we assign to all AST facts
@@ -59,15 +60,16 @@ const mergeTupleMapDeep = (facts, addition) => {
 
 
 
-const transformAtom = (tables, item, atomN, filename) => {
+const transformAtom = (tables, item, gensym, filename) => {
   const { line, name, time, args } = item['Atom'];
-
+  const atomId = {symbol: gensym('a')};
+  
   const intArgs = [];
   const symArgs = [];
   const strArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [atomN, argN, arg];
-    if (isSymbol(arg)) { symArgs.push([atomN, argN, argToSymbol(arg)]); }
+    const tuple = [atomId, argN, arg];
+    if (isSymbol(arg)) { symArgs.push([atomId, argN, argToSymbol(arg)]); }
     else if (isInteger(arg)) { intArgs.push(tuple); }
     else if (isString(arg)) { strArgs.push(tuple); }
     else {
@@ -76,8 +78,11 @@ const transformAtom = (tables, item, atomN, filename) => {
   });
 
   return mergeTupleMapDeep(tables, {
-    'ast_atom/5': [
-      [filename, line, {symbol: name}, atomN, time]
+    'ast_atom_location/3': [
+      [filename, line, atomId]
+    ],
+    'ast_atom/3': [
+      [{symbol: name}, atomId, time]
     ],
     'ast_atom_int_arg/3': intArgs,
     'ast_atom_sym_arg/3': symArgs,
@@ -87,14 +92,15 @@ const transformAtom = (tables, item, atomN, filename) => {
 
 
 
-const transformAtomCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
+const transformAtomCondition = (tables, bodyRule, clauseId, gensym, filename) => {
+  const ruleId = {symbol: gensym('b')};
   const { negated, name, args, time, line } = bodyRule['AtomCondition'];
   const intTime = [];
   const varTime = [];
   if (isVariable(time)) {
-    varTime.push([clauseN, ruleN, argToSymbol(time)]);
+    varTime.push([ruleId, argToSymbol(time)]);
   } else if (isInteger(time)) {
-    intTime.push([clauseN, ruleN, time]);
+    intTime.push([ruleId, time]);
   }
 
   const varArgs = [];
@@ -102,13 +108,13 @@ const transformAtomCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
   const strArgs = [];
   const symArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [clauseN, ruleN, argN, arg];
+    const tuple = [ruleId, argN, arg];
     if (isSymbol(arg)) {
-      symArgs.push([clauseN, ruleN, argN, argToSymbol(arg)]);
+      symArgs.push([ruleId, argN, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
       const { Variable: { location } } = arg;
       varArgs.push([
-        clauseN, ruleN, argN, argToSymbol(arg), boolToSymbol(location)
+        ruleId, argN, argToSymbol(arg), boolToSymbol(location)
       ]);
     } else if (isInteger(arg)) { intArgs.push(tuple); }
     else if (isString(arg)) { strArgs.push(tuple); }
@@ -118,34 +124,38 @@ const transformAtomCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
   });
 
   return mergeTupleMapDeep(tables, {
-    'ast_body_rule/4': [
-      [filename, line, clauseN, ruleN]
+    'ast_body_rule_location/3': [
+      [filename, line, ruleId]
     ],
-    'ast_body_atom/4': [
-      [clauseN, ruleN, argToSymbol(name), boolToSymbol(negated)]
+    'ast_body_rule/2': [
+      [clauseId, ruleId]
     ],
-    'ast_body_atom_var_time/3': varTime,
-    'ast_body_atom_int_time/3': intTime,
-    'ast_body_var_arg/5': varArgs,
-    'ast_body_int_arg/4': intArgs,
-    'ast_body_sym_arg/4': symArgs,
-    'ast_body_str_arg/4': strArgs,
+    'ast_body_atom/3': [
+      [ruleId, argToSymbol(name), boolToSymbol(negated)]
+    ],
+    'ast_body_atom_var_time/2': varTime,
+    'ast_body_atom_int_time/2': intTime,
+    'ast_body_var_arg/4': varArgs,
+    'ast_body_int_arg/3': intArgs,
+    'ast_body_sym_arg/3': symArgs,
+    'ast_body_str_arg/3': strArgs,
   });
 };
 
 
 
-const transformBinaryPredicateCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
+const transformBinaryPredicateCondition = (tables, bodyRule, clauseId, gensym, filename) => {
   const { left, right, op, line } = bodyRule['BinaryPredicateCondition'];
+  const ruleId = {symbol: gensym('b')};
 
   const varArgs = [];
   const intArgs = [];
   [left, right].forEach((arg, argN) => {
-    const tuple = [clauseN, ruleN, argN, arg];
+    const tuple = [ruleId, argN, arg];
     if (isVariable(arg)) {
       const { location } = arg;
       varArgs.push([
-        clauseN, ruleN, argN, argToSymbol(arg), boolToSymbol(location)
+        ruleId, argN, argToSymbol(arg), boolToSymbol(location)
       ]);
     }
     else if (isInteger(arg)) { intArgs.push(tuple); }
@@ -157,46 +167,53 @@ const transformBinaryPredicateCondition = (tables, bodyRule, clauseN, ruleN, fil
   });
 
   return mergeTupleMapDeep(tables, {
-    'ast_body_rule/4': [
-      [filename, line, clauseN, ruleN]
+    'ast_body_rule_location/3': [
+      [filename, line, ruleId]
     ],
-    'ast_body_binop/3': [
-      [clauseN, ruleN, {symbol: op}]
+    'ast_body_rule/2': [
+      [clauseId, ruleId]
     ],
-    'ast_body_var_arg/5': varArgs,
-    'ast_body_int_arg/4': intArgs,
+    'ast_body_binop/2': [
+      [ruleId, {symbol: op}]
+    ],
+    'ast_body_var_arg/4': varArgs,
+    'ast_body_int_arg/3': intArgs,
   });
 };
 
 
 
-const transformChooseCondition = (tables, bodyRule, clauseN, ruleN, filename) => {
+const transformChooseCondition = (tables, bodyRule, clauseId, gensym, filename) => {
   const { line, keyvars, rowvars } = bodyRule['ChooseCondition'];
+  const ruleId = {symbol: gensym('b')};
 
   const varToTuple = (arg, argN) =>
-    [clauseN, ruleN, argN, argToSymbol(arg)];
+    [ruleId, argN, argToSymbol(arg)];
   const keyVars = keyvars.map(varToTuple);
   const rowVars = rowvars.map(varToTuple);
 
   return mergeTupleMapDeep(tables, {
-    'ast_body_rule/4': [
-      [filename, line, clauseN, ruleN]
+    'ast_body_rule_location/3': [
+      [filename, line, ruleId]
     ],
-    'ast_body_choose/2': [[clauseN, ruleN]],
-    'ast_body_choose_key_var/4': keyVars,
-    'ast_body_choose_row_var/4': rowVars,
+    'ast_body_rule/2': [
+      [clauseId, ruleId]
+    ],
+    'ast_body_choose/1': [[ruleId]],
+    'ast_body_choose_key_var/3': keyVars,
+    'ast_body_choose_row_var/3': rowVars,
   });
 };
 
 
 
-const transformBodyRule = (tables, bodyRule, clauseN, ruleN, filename) => {
+const transformBodyRule = (tables, bodyRule, clauseId, gensym, filename) => {
   if ('AtomCondition' in bodyRule) {
-    return transformAtomCondition(tables, bodyRule, clauseN, ruleN, filename);
+    return transformAtomCondition(tables, bodyRule, clauseId, gensym, filename);
   } else if ('BinaryPredicateCondition' in bodyRule) {
-    return transformBinaryPredicateCondition(tables, bodyRule, clauseN, ruleN, filename);
+    return transformBinaryPredicateCondition(tables, bodyRule, clauseId, gensym, filename);
   } else if ('ChooseCondition' in bodyRule) {
-    return transformChooseCondition(tables, bodyRule, clauseN, ruleN, filename);
+    return transformChooseCondition(tables, bodyRule, clauseId, gensym, filename);
   }
 
   throw new Error(`Unknown body rule item: ${JSON.stringify(bodyRule)}`);
@@ -204,22 +221,23 @@ const transformBodyRule = (tables, bodyRule, clauseN, ruleN, filename) => {
 
 
 
-const transformRule = (tables, item, clauseN, filename) => {
+const transformRule = (tables, item, gensym, filename) => {
   const { line, name, args, body, suffix } = item['Rule'];
+  const clauseId = {symbol: gensym('c')};
 
   const varArgs = [];
   const intArgs = [];
   const strArgs = [];
   const symArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [clauseN, argN, arg];
+    const tuple = [clauseId, argN, arg];
     if (isSymbol(arg)) {
-      symArgs.push([clauseN, argN, argToSymbol(arg)]);
+      symArgs.push([clauseId, argN, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
       const { Variable: { location, afunc } } = arg;
       const afunc1 = {symbol: (afunc ?? 'none')};
       varArgs.push([
-        clauseN, argN, argToSymbol(arg),
+        clauseId, argN, argToSymbol(arg),
         afunc1, boolToSymbol(location)
       ]);
     } else if (isInteger(arg)) { intArgs.push(tuple); }
@@ -229,14 +247,17 @@ const transformRule = (tables, item, clauseN, filename) => {
     }
   });
 
-  const tables1 = body.reduce((tables, bodyRule, ruleN) => { 
-    return transformBodyRule(tables, bodyRule, clauseN, ruleN, filename)
+  const tables1 = body.reduce((tables, bodyRule) => {
+    return transformBodyRule(tables, bodyRule, clauseId, gensym, filename)
   }, tables);
 
   const suffix1 = {symbol: suffix ?? 'none'};
   return mergeTupleMapDeep(tables1, {
-    'ast_clause/5': [
-      [filename, line, {symbol: name}, clauseN, suffix1]
+    'ast_clause_location/3': [
+      [filename, line, clauseId]
+    ],
+    'ast_clause/3': [
+      [{symbol: name}, clauseId, suffix1]
     ],
     'ast_clause_var_arg/5': varArgs,
     'ast_clause_int_arg/3': intArgs,
@@ -247,11 +268,11 @@ const transformRule = (tables, item, clauseN, filename) => {
 
 
 
-const transformItem = (tables, item, index, filename) => {
+const transformItem = (tables, item, gensym, filename) => {
   if (item['Atom']) {
-    return transformAtom(tables, item, index, filename);
+    return transformAtom(tables, item, gensym, filename);
   } else if (item['Rule']) {
-    return transformRule(tables, item, index, filename);
+    return transformRule(tables, item, gensym, filename);
   }
 
   throw new Error(`Unknown type of item: ${item}`);
@@ -260,11 +281,24 @@ const transformItem = (tables, item, index, filename) => {
 
 
 
+const makeGensymFunc = (filename) => {
+  const rand = seedrandom(filename);
+  const digits = 3;
+  return (prefix) => `${prefix}${Math.floor(rand()*(10**digits))}`;
+};
+
 // produce sets of tuples for each rule
 const tree2facts = (tree, filename) => {
   const filenameStr = {string: filename};
-  const tables = tree.reduce((tables, item, i) =>
-    transformItem(tables, item, i, filenameStr), new Map());
+
+  // we use random generator for symbol generation
+  // for ClauseId and AtomId values.
+  // It is better to have reproducible results,
+  // that's why we use random with seed
+  const gensym = makeGensymFunc(filename);
+
+  const tables = tree.reduce((tables, item) =>
+    transformItem(tables, item, gensym, filenameStr), new Map());
 
   // let's remove empty tables to make it easier to look at the ast
   const tables1 = new Map([...tables].filter(
@@ -279,7 +313,7 @@ const sourceFactsFromAstFacts = (astFacts) => {
   // we need to walk following facts
   // and assemble facts that they are describing:
   //
-  // ast_atom/5
+  // ast_atom/3
   // ast_atom_sym_arg/3
   // ast_atom_int_arg/3
   // ast_atom_str_arg/3
@@ -287,9 +321,9 @@ const sourceFactsFromAstFacts = (astFacts) => {
   const tuples = astFacts.get(AST_TIMESTAMP);
 
   const output = new Map();
-  (tuples.get('ast_atom/5') ?? [])
+  (tuples.get('ast_atom/3') ?? [])
     .forEach(fTuple => {
-      const [_fname, _line, name, atomN, sourceTimestamp] = fTuple;
+      const [name, atomId, sourceTimestamp] = fTuple;
 
       const tuplesMap = (output.get(sourceTimestamp) ?? (new Map()));
       output.set(sourceTimestamp, tuplesMap);
@@ -300,9 +334,9 @@ const sourceFactsFromAstFacts = (astFacts) => {
       const argNames = ['ast_atom_sym_arg/3', 'ast_atom_int_arg/3', 'ast_atom_str_arg/3'];
       argNames.forEach(name => {
         (tuples.get(name) ?? [])
-          .filter(([atomN1, n, val]) => (atomN1 == atomN))
+          .filter(([atomId1, n, val]) => (atomId1 == atomId))
           .forEach(aTuple => {
-            const [_atomN, n, val] = aTuple;
+            const [_atomId, n, val] = aTuple;
             resultTuple[n] = val;
           });
       });
@@ -330,7 +364,7 @@ const rulesFromAstFacts = (astFacts) => {
   const tupleMap = astFacts.get(AST_TIMESTAMP);
   const rulesTupleMap = new Map([...tupleMap].filter(([key, _tuples]) => {
     switch (key) {
-      case 'ast_atom/5':
+      case 'ast_atom/3':
       case 'ast_atom_sym_arg/3':
       case 'ast_atom_int_arg/3':
       case 'ast_atom_str_arg/3':

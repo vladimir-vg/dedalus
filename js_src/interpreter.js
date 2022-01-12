@@ -5,23 +5,23 @@ import { Table } from './table.js';
 
 
 
-const findLineWithNegation = (rules) => {
-  const tuples1 = rules.get('ast_body_atom/4');
-  const bodyFact = _.find(tuples1, tuple => {
-    const [_clauseN0, _ruleN0, negated] = tuple;
-    return _.isEqual(negated, { symbol: 'true' });
-  });
-  if (!bodyFact) {
-    return null;
-  }
-  const [clauseN, ruleN, _negated1] = bodyFact;
-  const tuples2 = rules.get('ast_body_rule/4');
-  const [_filename2, line] = _.find(tuples2, tuple => {
-    const [_filename3, _line3, clauseN1, ruleN1] = tuple;
-    return (clauseN == clauseN1) && (ruleN == ruleN1);
-  });
-  return line;
-};
+// const findLineWithNegation = (rules) => {
+//   const tuples1 = rules.get('ast_body_atom/3');
+//   const bodyFact = _.find(tuples1, tuple => {
+//     const [_ruleN0, _name, negated] = tuple;
+//     return _.isEqual(negated, { symbol: 'true' });
+//   });
+//   if (!bodyFact) {
+//     return null;
+//   }
+//   const [ruleId, _name, _negated1] = bodyFact;
+//   const tuples2 = rules.get('ast_body_rule/2');
+//   const [_filename2, line] = _.find(tuples2, tuple => {
+//     const [clauseId1, ruleId1] = tuple;
+//     return (clauseId == clauseId1) && (ruleId == ruleId1);
+//   });
+//   return line;
+// };
 
 
 
@@ -38,35 +38,35 @@ const collectValuesFromFacts = (ast, selectors) => {
   return result;
 };
 
-const collectBodyFacts = (ast, clauseN) => {
+const collectBodyFacts = (ast, clauseId) => {
   const items = [];
 
-  (ast.get('ast_body_rule/4') ?? []).forEach(bTuple => {
-    const [_f, _l,clauseN1, ruleN] = bTuple;
-    if (clauseN != clauseN1) { return; }
+  (ast.get('ast_body_rule/2') ?? []).forEach(bTuple => {
+    const [clauseId1, ruleId] = bTuple;
+    if (clauseId != clauseId1) { return; }
 
     const bodyFact = _.find(
-        (ast.get('ast_body_atom/4') ?? []),
+        (ast.get('ast_body_atom/3') ?? []),
         (fTuple) => {
-          const [clauseN2, ruleN2, _name, _n] = fTuple;
-          return (clauseN2 == clauseN) && (ruleN == ruleN2);
+          const [ruleId2, _name, _n] = fTuple;
+          return (ruleId == ruleId2);
         });
     
     if (!bodyFact) { return; }
-    const [_c1, _r1, name, _n] = bodyFact;
+    const [_r1, name, _n] = bodyFact;
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[0] == clauseN) && (row[1] == ruleN),
-      selectValue: (row) => isVar ? row[3]['symbol'] : row[3],
-      selectIndex: (row) => row[2],
+      keep: (row) => (row[0] == ruleId),
+      selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
+      selectIndex: (row) => row[1],
     });
 
     const params = collectValuesFromFacts(ast, [
-      valueCollector('ast_body_var_arg/5', true),
-      valueCollector('ast_body_int_arg/4'),
-      valueCollector('ast_body_str_arg/4'),
-      valueCollector('ast_body_sym_arg/4'),
+      valueCollector('ast_body_var_arg/4', true),
+      valueCollector('ast_body_int_arg/3'),
+      valueCollector('ast_body_str_arg/3'),
+      valueCollector('ast_body_sym_arg/3'),
     ]);
     const key = `${name['symbol']}/${params.length}`;
 
@@ -76,24 +76,26 @@ const collectBodyFacts = (ast, clauseN) => {
   return items;
 };
 
-const collectBodyConditions = (ast, clauseN) => {
+const collectBodyConditions = (ast, clauseId) => {
   const items = [];
-  (ast.get('ast_body_binop/3') ?? []).forEach(tuple => {
-    const [clauseN1, ruleN, op] = tuple;
-    if (clauseN1 != clauseN) { return; }
+  (ast.get('ast_body_binop/2') ?? []).forEach(tuple => {
+    const [ruleId, op] = tuple;
+    const doesBelongToClause = ast.get('ast_body_rule/2')
+      .some(tuple => _.isEqual(tuple, [clauseId, ruleId]));
+    if (!doesBelongToClause) { return; }
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[0] == clauseN) && (row[1] == ruleN),
-      selectValue: (row) => isVar ? row[3]['symbol'] : row[3],
-      selectIndex: (row) => row[2],
+      keep: (row) => (row[0] == ruleId),
+      selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
+      selectIndex: (row) => row[1],
     });
 
     const params = collectValuesFromFacts(ast, [
-      valueCollector('ast_body_var_arg/5', true),
-      valueCollector('ast_body_int_arg/4'),
-      valueCollector('ast_body_str_arg/4'),
-      valueCollector('ast_body_sym_arg/4'),
+      valueCollector('ast_body_var_arg/4', true),
+      valueCollector('ast_body_int_arg/3'),
+      valueCollector('ast_body_str_arg/3'),
+      valueCollector('ast_body_sym_arg/3'),
     ]);
 
     items.push([params[0], op['symbol'], params[1]]);
@@ -104,14 +106,14 @@ const collectBodyConditions = (ast, clauseN) => {
 
 const prepareDeductiveClauses = (ast) => {
   const clauses = [];
-  (ast.get('ast_clause/5') ?? []).forEach(cTuple => {
-    const [_f, _l, name, clauseN, suffix] = cTuple;
+  (ast.get('ast_clause/3') ?? []).forEach(cTuple => {
+    const [name, clauseId, suffix] = cTuple;
     // we are interested only in deductive rules
     if (!_.isEqual(suffix, {symbol: 'none'})) { return; }
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[0] == clauseN),
+      keep: (row) => (row[0] == clauseId),
       selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
       selectIndex: (row) => row[1],
     });
@@ -124,8 +126,8 @@ const prepareDeductiveClauses = (ast) => {
     ]);
     const key = `${name['symbol']}/${params.length}`;
 
-    const bodyFacts = collectBodyFacts(ast, clauseN);
-    const bodyConditions = collectBodyConditions(ast, clauseN);
+    const bodyFacts = collectBodyFacts(ast, clauseId);
+    const bodyConditions = collectBodyConditions(ast, clauseId);
 
     clauses.push({ key, params, bodyFacts, bodyConditions });
   });
@@ -174,11 +176,11 @@ class Interpreter {
     this.prevTickFacts = null;
     this.upcomingTickFacts = new Map();
 
-    // for now no negation is supported
-    const line = findLineWithNegation(this.rules);
-    if (line) {
-      throw new Error(`Negation not supported yet, found one at ${line} line`);
-    }
+    // // for now no negation is supported
+    // const line = findLineWithNegation(this.rules);
+    // if (line) {
+    //   throw new Error(`Negation not supported yet, found one at ${line} line`);
+    // }
   }
 
   // isStale() {
