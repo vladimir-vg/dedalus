@@ -221,6 +221,10 @@ reachable_with_negation(Name1, Name3, Filename, Line) <-
   reachable(Name1, Name2),
   predicate_dependency(Name2, Name3, Negated, Filename, Line),
   Negated = true;
+reachable_with_negation(Name1, Name3, Filename, Line) <-
+  reachable_with_negation(Name1, Name2, _Filename, _Line),
+  predicate_dependency(Name2, Name3, Negated, Filename, Line),
+  Negated = true;
 
 
 
@@ -232,15 +236,13 @@ reachable(Name1, Name3) <-
   predicate_dependency(Name2, Name3, Negated, _Filename, _Line),
   Negated = false;
 
-% Name1 is above (must be computed last)
 % Name2 is below (must be computed before)
+% Name1 is above (must be computed after)
 predicate_dependency(Name1, Name2, Negated, Filename, Line) <-
   ast_clause(Name1, ClauseId, none),
   ast_body_expr(ClauseId, ExprId),
   ast_body_atom(ExprId, Name2, Negated),
   ast_body_expr_location(Filename, Line, ExprId);
-
-
 
 
 
