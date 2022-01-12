@@ -1,12 +1,17 @@
 test_passed <-
-  ast_atom("./parser/various.in.dedalus", _, no_fields_fact, 0, 100),
+  ast_atom_location("./parser/various.in.dedalus", _L, AtomId1),
+  ast_atom(no_fields_fact, AtomId1, 100),
 
-  ast_clause("./parser/various.in.dedalus", _, omin, 1, none),
-    ast_clause_var_arg(1, 0, 'A', none, false),
-    ast_clause_var_arg(1, 1, 'C', min, false),
+  ast_clause_location("./parser/various.in.dedalus", _L, ClauseId1),
+  ast_clause(omin, ClauseId1, none),
+    ast_clause_var_arg(ClauseId1, 0, 'A', none, false),
+    ast_clause_var_arg(ClauseId1, 1, 'C', min, false),
 
-    ast_body_rule("./parser/various.in.dedalus", _, 1, 0),
-    ast_body_atom(1, 0, m_priority_queue, false),
-      ast_body_var_arg(1, 0, 0, 'A', false),
-      ast_body_var_arg(1, 0, 1, '_', false),
-      ast_body_var_arg(1, 0, 2, 'C', false);
+    % TODO: rename ast_body_rule -> ast_body_expr
+
+    ast_body_rule_location("./parser/various.in.dedalus", _L, BodyTermId1),
+    ast_body_rule(ClauseId1, BodyTermId1),
+    ast_body_atom(BodyTermId1, m_priority_queue, false),
+      ast_body_var_arg(BodyTermId1, 0, 'A', false),
+      ast_body_var_arg(BodyTermId1, 1, '_', false),
+      ast_body_var_arg(BodyTermId1, 2, 'C', false);
