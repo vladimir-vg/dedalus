@@ -1,11 +1,16 @@
 
+const symbolRe = /^[a-z][a-zA-Z0-9_]*$/
+const doesSymbolNeedEscaping = (str) => !symbolRe.test(str);
+
 const prettyPrintValue = (value) => {
   if (typeof value === 'number') {
     return `${value}`;
   }
   if (value['symbol']) {
-    // TODO: display without escaping when possible
-    return `'${value['symbol']}'`;
+    if (doesSymbolNeedEscaping(value['symbol'])) {
+      return `'${value['symbol']}'`;
+    }
+    return value['symbol'];
   }
   if (value['string']) {
     return `"${value['string']}"`;
