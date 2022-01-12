@@ -92,15 +92,15 @@ const transformAtom = (tables, item, gensym, filename) => {
 
 
 
-const transformAtomCondition = (tables, bodyRule, clauseId, gensym, filename) => {
-  const ruleId = {symbol: gensym('b')};
-  const { negated, name, args, time, line } = bodyRule['AtomCondition'];
+const transformAtomCondition = (tables, bodyExpr, clauseId, gensym, filename) => {
+  const exprId = {symbol: gensym('b')};
+  const { negated, name, args, time, line } = bodyExpr['AtomCondition'];
   const intTime = [];
   const varTime = [];
   if (isVariable(time)) {
-    varTime.push([ruleId, argToSymbol(time)]);
+    varTime.push([exprId, argToSymbol(time)]);
   } else if (isInteger(time)) {
-    intTime.push([ruleId, time]);
+    intTime.push([exprId, time]);
   }
 
   const varArgs = [];
@@ -108,13 +108,13 @@ const transformAtomCondition = (tables, bodyRule, clauseId, gensym, filename) =>
   const strArgs = [];
   const symArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [ruleId, argN, arg];
+    const tuple = [exprId, argN, arg];
     if (isSymbol(arg)) {
-      symArgs.push([ruleId, argN, argToSymbol(arg)]);
+      symArgs.push([exprId, argN, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
       const { Variable: { location } } = arg;
       varArgs.push([
-        ruleId, argN, argToSymbol(arg), boolToSymbol(location)
+        exprId, argN, argToSymbol(arg), boolToSymbol(location)
       ]);
     } else if (isInteger(arg)) { intArgs.push(tuple); }
     else if (isString(arg)) { strArgs.push(tuple); }
@@ -124,14 +124,14 @@ const transformAtomCondition = (tables, bodyRule, clauseId, gensym, filename) =>
   });
 
   return mergeTupleMapDeep(tables, {
-    'ast_body_rule_location/3': [
-      [filename, line, ruleId]
+    'ast_body_expr_location/3': [
+      [filename, line, exprId]
     ],
-    'ast_body_rule/2': [
-      [clauseId, ruleId]
+    'ast_body_expr/2': [
+      [clauseId, exprId]
     ],
     'ast_body_atom/3': [
-      [ruleId, argToSymbol(name), boolToSymbol(negated)]
+      [exprId, argToSymbol(name), boolToSymbol(negated)]
     ],
     'ast_body_atom_var_time/2': varTime,
     'ast_body_atom_int_time/2': intTime,
@@ -144,18 +144,18 @@ const transformAtomCondition = (tables, bodyRule, clauseId, gensym, filename) =>
 
 
 
-const transformBinaryPredicateCondition = (tables, bodyRule, clauseId, gensym, filename) => {
-  const { left, right, op, line } = bodyRule['BinaryPredicateCondition'];
-  const ruleId = {symbol: gensym('b')};
+const transformBinaryPredicateCondition = (tables, bodyExpr, clauseId, gensym, filename) => {
+  const { left, right, op, line } = bodyExpr['BinaryPredicateCondition'];
+  const exprId = {symbol: gensym('b')};
 
   const varArgs = [];
   const intArgs = [];
   [left, right].forEach((arg, argN) => {
-    const tuple = [ruleId, argN, arg];
+    const tuple = [exprId, argN, arg];
     if (isVariable(arg)) {
       const { location } = arg;
       varArgs.push([
-        ruleId, argN, argToSymbol(arg), boolToSymbol(location)
+        exprId, argN, argToSymbol(arg), boolToSymbol(location)
       ]);
     }
     else if (isInteger(arg)) { intArgs.push(tuple); }
@@ -167,14 +167,14 @@ const transformBinaryPredicateCondition = (tables, bodyRule, clauseId, gensym, f
   });
 
   return mergeTupleMapDeep(tables, {
-    'ast_body_rule_location/3': [
-      [filename, line, ruleId]
+    'ast_body_expr_location/3': [
+      [filename, line, exprId]
     ],
-    'ast_body_rule/2': [
-      [clauseId, ruleId]
+    'ast_body_expr/2': [
+      [clauseId, exprId]
     ],
     'ast_body_binop/2': [
-      [ruleId, {symbol: op}]
+      [exprId, {symbol: op}]
     ],
     'ast_body_var_arg/4': varArgs,
     'ast_body_int_arg/3': intArgs,
@@ -183,23 +183,23 @@ const transformBinaryPredicateCondition = (tables, bodyRule, clauseId, gensym, f
 
 
 
-const transformChooseCondition = (tables, bodyRule, clauseId, gensym, filename) => {
-  const { line, keyvars, rowvars } = bodyRule['ChooseCondition'];
-  const ruleId = {symbol: gensym('b')};
+const transformChooseCondition = (tables, bodyExpr, clauseId, gensym, filename) => {
+  const { line, keyvars, rowvars } = bodyExpr['ChooseCondition'];
+  const exprId = {symbol: gensym('b')};
 
   const varToTuple = (arg, argN) =>
-    [ruleId, argN, argToSymbol(arg)];
+    [exprId, argN, argToSymbol(arg)];
   const keyVars = keyvars.map(varToTuple);
   const rowVars = rowvars.map(varToTuple);
 
   return mergeTupleMapDeep(tables, {
-    'ast_body_rule_location/3': [
-      [filename, line, ruleId]
+    'ast_body_expr_location/3': [
+      [filename, line, exprId]
     ],
-    'ast_body_rule/2': [
-      [clauseId, ruleId]
+    'ast_body_expr/2': [
+      [clauseId, exprId]
     ],
-    'ast_body_choose/1': [[ruleId]],
+    'ast_body_choose/1': [[exprId]],
     'ast_body_choose_key_var/3': keyVars,
     'ast_body_choose_row_var/3': rowVars,
   });
@@ -207,16 +207,16 @@ const transformChooseCondition = (tables, bodyRule, clauseId, gensym, filename) 
 
 
 
-const transformBodyRule = (tables, bodyRule, clauseId, gensym, filename) => {
-  if ('AtomCondition' in bodyRule) {
-    return transformAtomCondition(tables, bodyRule, clauseId, gensym, filename);
-  } else if ('BinaryPredicateCondition' in bodyRule) {
-    return transformBinaryPredicateCondition(tables, bodyRule, clauseId, gensym, filename);
-  } else if ('ChooseCondition' in bodyRule) {
-    return transformChooseCondition(tables, bodyRule, clauseId, gensym, filename);
+const transformBodyExpr = (tables, bodyExpr, clauseId, gensym, filename) => {
+  if ('AtomCondition' in bodyExpr) {
+    return transformAtomCondition(tables, bodyExpr, clauseId, gensym, filename);
+  } else if ('BinaryPredicateCondition' in bodyExpr) {
+    return transformBinaryPredicateCondition(tables, bodyExpr, clauseId, gensym, filename);
+  } else if ('ChooseCondition' in bodyExpr) {
+    return transformChooseCondition(tables, bodyExpr, clauseId, gensym, filename);
   }
 
-  throw new Error(`Unknown body rule item: ${JSON.stringify(bodyRule)}`);
+  throw new Error(`Unknown body rule item: ${JSON.stringify(bodyExpr)}`);
 };
 
 
@@ -247,8 +247,8 @@ const transformRule = (tables, item, gensym, filename) => {
     }
   });
 
-  const tables1 = body.reduce((tables, bodyRule) => {
-    return transformBodyRule(tables, bodyRule, clauseId, gensym, filename)
+  const tables1 = body.reduce((tables, bodyExpr) => {
+    return transformBodyExpr(tables, bodyExpr, clauseId, gensym, filename)
   }, tables);
 
   const suffix1 = {symbol: suffix ?? 'none'};

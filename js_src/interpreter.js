@@ -14,11 +14,11 @@ import { Table } from './table.js';
 //   if (!bodyFact) {
 //     return null;
 //   }
-//   const [ruleId, _name, _negated1] = bodyFact;
-//   const tuples2 = rules.get('ast_body_rule/2');
+//   const [exprId, _name, _negated1] = bodyFact;
+//   const tuples2 = rules.get('ast_body_expr/2');
 //   const [_filename2, line] = _.find(tuples2, tuple => {
-//     const [clauseId1, ruleId1] = tuple;
-//     return (clauseId == clauseId1) && (ruleId == ruleId1);
+//     const [clauseId1, exprId1] = tuple;
+//     return (clauseId == clauseId1) && (exprId == exprId1);
 //   });
 //   return line;
 // };
@@ -41,15 +41,15 @@ const collectValuesFromFacts = (ast, selectors) => {
 const collectBodyFacts = (ast, clauseId) => {
   const items = [];
 
-  (ast.get('ast_body_rule/2') ?? []).forEach(bTuple => {
-    const [clauseId1, ruleId] = bTuple;
+  (ast.get('ast_body_expr/2') ?? []).forEach(bTuple => {
+    const [clauseId1, exprId] = bTuple;
     if (clauseId != clauseId1) { return; }
 
     const bodyFact = _.find(
         (ast.get('ast_body_atom/3') ?? []),
         (fTuple) => {
-          const [ruleId2, _name, _n] = fTuple;
-          return (ruleId == ruleId2);
+          const [exprId2, _name, _n] = fTuple;
+          return (exprId == exprId2);
         });
     
     if (!bodyFact) { return; }
@@ -57,7 +57,7 @@ const collectBodyFacts = (ast, clauseId) => {
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[0] == ruleId),
+      keep: (row) => (row[0] == exprId),
       selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
       selectIndex: (row) => row[1],
     });
@@ -79,14 +79,14 @@ const collectBodyFacts = (ast, clauseId) => {
 const collectBodyConditions = (ast, clauseId) => {
   const items = [];
   (ast.get('ast_body_binop/2') ?? []).forEach(tuple => {
-    const [ruleId, op] = tuple;
-    const doesBelongToClause = ast.get('ast_body_rule/2')
-      .some(tuple => _.isEqual(tuple, [clauseId, ruleId]));
+    const [exprId, op] = tuple;
+    const doesBelongToClause = ast.get('ast_body_expr/2')
+      .some(tuple => _.isEqual(tuple, [clauseId, exprId]));
     if (!doesBelongToClause) { return; }
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[0] == ruleId),
+      keep: (row) => (row[0] == exprId),
       selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
       selectIndex: (row) => row[1],
     });

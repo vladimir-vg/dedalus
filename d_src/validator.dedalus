@@ -41,8 +41,8 @@
 % % Negated -- true/false
 % % RuleN -- position in the body, number of the rule
 % % body rule is identified uniquely by ClauseN-RuleN pair
-% ast_body_rule_location(Filename, Line, RuleId)
-% ast_body_rule(ClauseId, RuleId)
+% ast_body_expr_location(Filename, Line, RuleId)
+% ast_body_expr(ClauseId, RuleId)
 
 % % Op == '<', '>', '>=', ...
 % % expected to have two arg atoms with ArgN=1 and ArgN=2
@@ -171,7 +171,7 @@
 % So, here is the rule to detect 3rd case:
 % err_location_var_in_body_but_not_in_head(Filename, Line1, Line2) <-
 %   ast_clause(Filename, Line1, _Name, ClauseN, '@async'),
-%   ast_body_rule(Filename, Line2, ClauseN, RuleN),
+%   ast_body_expr(Filename, Line2, ClauseN, RuleN),
 %   % okay, so there exist a variable with location prefix in body
 %   ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
 %   LocPrefix = true,
@@ -192,7 +192,7 @@
 % err_location_not_in_async_rule(Filename, Line, ClauseN) <-
 %   ast_clause(Filename, _Line, _Name, ClauseN, Suffix),
 %   Suffix =/= '@async',
-%   ast_body_rule(Filename, Line, ClauseN, RuleN),
+%   ast_body_expr(Filename, Line, ClauseN, RuleN),
 %   ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
 %   LocPrefix = true;
 
@@ -200,8 +200,8 @@
 
 % timestamps
 % err_different_time_suffix_in_body(Filename, Line1, Line2) <-
-%   ast_body_rule(Filename, Line1, ClauseN, RuleN1),
-%   ast_body_rule(Filename, Line2, ClauseN, RuleN2),
+%   ast_body_expr(Filename, Line1, ClauseN, RuleN1),
+%   ast_body_expr(Filename, Line2, ClauseN, RuleN2),
 %   ast_body_atom_var_time(ClauseN, RuleN1, VarName1),
 %   ast_body_atom_var_time(ClauseN, RuleN2, VarName2),
 %   VarName1 =/= VarName2;
@@ -212,14 +212,14 @@ err_time_suffix_not_in_async_rule(Filename, Line, Name) <-
   ast_clause_location(Filename, _Line, ClauseId),
   ast_clause(Name, ClauseId, Suffix),
   Suffix =/= '@async',
-  ast_body_rule_location(Filename, Line, RuleId),
-  ast_body_rule(ClauseId, RuleId),
-  body_atom_has_time_suffix(RuleId);
+  ast_body_expr_location(Filename, Line, ExprId),
+  ast_body_expr(ClauseId, ExprId),
+  body_atom_has_time_suffix(ExprId);
 
-body_atom_has_time_suffix(RuleId) <-
-  ast_body_atom_var_time(RuleId, _VarName);
-body_atom_has_time_suffix(RuleId) <-
-  ast_body_atom_int_time(RuleId, _Value);
+body_atom_has_time_suffix(ExprId) <-
+  ast_body_atom_var_time(ExprId, _VarName);
+body_atom_has_time_suffix(ExprId) <-
+  ast_body_atom_int_time(ExprId, _Value);
 
 
 
@@ -227,7 +227,7 @@ body_atom_has_time_suffix(RuleId) <-
 % We don't support negation yet
 %
 % err_negated_not_in_positive(Filename, Line, VarName) <-
-%   ast_body_rule(Filename, Line, ClauseN, RuleN),
+%   ast_body_expr(Filename, Line, ClauseN, RuleN),
 %   ast_body_atom(ClauseN, RuleN, _Name, Negated),
 %   Negated = true,
 %   ast_body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix),
