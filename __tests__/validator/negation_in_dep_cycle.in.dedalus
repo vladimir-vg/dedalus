@@ -1,0 +1,14 @@
+reachable(X,Y) <-
+  link(X,Y);
+reachable(X,Y) <-
+  link(X,Z),
+  reachable(Z,Y);
+indirect(X,Y) <-
+  reachable(X,Y),
+  not link(X,Y);
+
+p <- not q;
+q <- not p;
+
+p1 <- q1;
+q1 <- not p1;

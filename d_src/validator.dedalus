@@ -41,29 +41,29 @@
 % % Negated -- true/false
 % % RuleN -- position in the body, number of the rule
 % % body rule is identified uniquely by ClauseN-RuleN pair
-% ast_body_expr_location(Filename, Line, RuleId)
-% ast_body_expr(ClauseId, RuleId)
+% ast_body_expr_location(Filename, Line, ExprId)
+% ast_body_expr(ClauseId, ExprId)
 
 % % Op == '<', '>', '>=', ...
 % % expected to have two arg atoms with ArgN=1 and ArgN=2
-% ast_body_binop(RuleId, Op)
+% ast_body_binop(ExprId, Op)
 
-% ast_body_atom(RuleId, Name, Negated)
+% ast_body_atom(ExprId, Name, Negated)
 % % if body rule has explicit time variable
-% ast_body_atom_var_time(RuleId, VarName)
+% ast_body_atom_var_time(ExprId, VarName)
 % % if it is a constant
-% ast_body_atom_int_time(RuleId, Value)
+% ast_body_atom_int_time(ExprId, Value)
 
-% ast_body_choose(RuleId)
-% ast_body_choose_key_var(RuleId, ArgN, VarName)
-% ast_body_choose_row_var(RuleId, ArgN, VarName)
+% ast_body_choose(ExprId)
+% ast_body_choose_key_var(ExprId, ArgN, VarName)
+% ast_body_choose_row_var(ExprId, ArgN, VarName)
 
 % % information about arg used in body rule
 % % LocPrefix = true/false
-% ast_body_var_arg(RuleId, ArgN, VarName, LocPrefix)
-% ast_body_int_arg(RuleId, ArgN, Value)
-% ast_body_sym_arg(RuleId, ArgN, Value)
-% ast_body_str_arg(RuleId, ArgN, Value)
+% ast_body_var_arg(ExprId, ArgN, VarName, LocPrefix)
+% ast_body_int_arg(ExprId, ArgN, Value)
+% ast_body_sym_arg(ExprId, ArgN, Value)
+% ast_body_str_arg(ExprId, ArgN, Value)
 
 
 
@@ -205,6 +205,42 @@
 %   ast_body_atom_var_time(ClauseN, RuleN1, VarName1),
 %   ast_body_atom_var_time(ClauseN, RuleN2, VarName2),
 %   VarName1 =/= VarName2;
+
+
+
+% we assume that rules with same names have same arity
+err_negation_in_dep_cycle(Filename, Line, Name) <-
+  reachable_with_negation(Name, Name, Filename, Line);
+
+
+
+reachable_with_negation(Name1, Name2, Filename, Line) <-
+  predicate_dependency(Name1, Name2, Negated, Filename, Line),
+  Negated = true;
+reachable_with_negation(Name1, Name3, Filename, Line) <-
+  reachable(Name1, Name2),
+  predicate_dependency(Name2, Name3, Negated, Filename, Line),
+  Negated = true;
+
+
+
+reachable(Name1, Name2) <-
+  predicate_dependency(Name1, Name2, Negated, _Filename, _Line),
+  Negated = false;
+reachable(Name1, Name3) <-
+  reachable(Name1, Name2),
+  predicate_dependency(Name2, Name3, Negated, _Filename, _Line),
+  Negated = false;
+
+% Name1 is above (must be computed last)
+% Name2 is below (must be computed before)
+predicate_dependency(Name1, Name2, Negated, Filename, Line) <-
+  ast_clause(Name1, ClauseId, none),
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_atom(ExprId, Name2, Negated),
+  ast_body_expr_location(Filename, Line, ExprId);
+
+
 
 
 

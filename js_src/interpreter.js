@@ -1,27 +1,7 @@
 import _ from 'lodash';
 
-import { mergeFactsDeep, mergeTupleMapDeep } from './ast.js';
+import { mergeTupleMapDeep } from './ast.js';
 import { Table } from './table.js';
-
-
-
-// const findLineWithNegation = (rules) => {
-//   const tuples1 = rules.get('ast_body_atom/3');
-//   const bodyFact = _.find(tuples1, tuple => {
-//     const [_ruleN0, _name, negated] = tuple;
-//     return _.isEqual(negated, { symbol: 'true' });
-//   });
-//   if (!bodyFact) {
-//     return null;
-//   }
-//   const [exprId, _name, _negated1] = bodyFact;
-//   const tuples2 = rules.get('ast_body_expr/2');
-//   const [_filename2, line] = _.find(tuples2, tuple => {
-//     const [clauseId1, exprId1] = tuple;
-//     return (clauseId == clauseId1) && (exprId == exprId1);
-//   });
-//   return line;
-// };
 
 
 
@@ -175,12 +155,6 @@ class Interpreter {
     // facts persisted for current timestamp
     this.prevTickFacts = null;
     this.upcomingTickFacts = new Map();
-
-    // // for now no negation is supported
-    // const line = findLineWithNegation(this.rules);
-    // if (line) {
-    //   throw new Error(`Negation not supported yet, found one at ${line} line`);
-    // }
   }
 
   // isStale() {
