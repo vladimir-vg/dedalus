@@ -2,7 +2,7 @@ Need to think about proper test organization for Dedalus. Familiar in/out like t
 
 If test fails, we would like to know why. Thus, it would be perfect if there would be a rule that ensures failure and captures values. We also would like to have several failure checks for same test file.
 
-We also want to finish test as fast as possible. We need a rule that would finish test immediately as passed. If we have `test_failed` and `test_passed` true at the same time, then test considered failed.
+We also want to finish test as fast as possible. We need a rule that would finish test immediately as passed. If we have `test_failed` and `test_passed` true at the same time, then test considered to be failed.
 
 `test_passed` and `test_failed` may have any arity.
 

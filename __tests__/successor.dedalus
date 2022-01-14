@@ -1,0 +1,33 @@
+'$stratum'(one, fact1);
+'$stratum'(one, rule1);
+'$stratum'(one, rule2);
+'$stratum'(one, test_passed);
+
+
+
+fact1(1)@0;
+fact1(100)@0;
+fact1(-10)@0;
+
+rule1(A, E) <-
+  fact1(A),
+  successor(A, B),
+  successor(B, C),
+  successor(C, D),
+  successor(D, E);
+
+rule2(A, C) <-
+  successor(A, B),
+  fact1(B),
+  successor(B, C);
+
+
+
+test_passed <-
+  rule1(1, 5),
+  rule1(100, 105),
+  rule1(-10, -5),
+
+  rule2(0, 2),
+  rule2(99, 101),
+  rule2(-11, -9);

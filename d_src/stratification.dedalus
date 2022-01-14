@@ -1,11 +1,8 @@
 % This code takes ast facts and performes required stratification for negation and aggregation.
-% It assumed that code is valid (no negation or aggregation in dependency cycles).
-%
-% This way we can keep more parts of the interpreter written in Dedalus.
-% This way it would be easier to port and rewrite implementation in different language.
+% It is assumed that input ast is valid (no negation or aggregation in dependency cycles).
 %
 % This code has explicitly specified stratification $stratum and $stratum_dependency,
-% which makes it possible to execute it by semi-positive Datalog
+% which makes it possible to execute it by semi-positive Datalog.
 
 '$stratum'(a, ast_clause);
 '$stratum'(a, ast_body_expr);
@@ -175,7 +172,7 @@ stratum_dependency(ParentStratum, ChildStratum) <-
 
 % It would be better to use symbols for stratums
 % to explicitly show that they are not ordered,
-% only stratum_dependency facts matter
+% only stratum_dependency define ordering
 symbol(1, a); symbol(2, b); symbol(3, c); symbol(4, d); symbol(5, e);
 symbol(6, f); symbol(7, g); symbol(8, h); symbol(9, i); symbol(10, j);
 symbol(11, k); symbol(12, l); symbol(13, m); symbol(14, n); symbol(15, o);
