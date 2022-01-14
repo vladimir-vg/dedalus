@@ -1,0 +1,124 @@
+% This code takes ast facts and performes required stratification for negation.
+% It assumed that code is valid (no negation in dependency cycles).
+%
+% This way we can keep more parts of the interpreter written in Dedalus,
+% thus, easier to port, rewrite implementation to different language.
+
+% This code is not executed by Dedalus, but by Semi-Positive Datalog,
+% which doesn't support negation for non-ground atoms.
+% In order it to work we explicitly write down stratification
+% of this code, which can be executed one by one.
+
+'$stratum'(a, rule1);
+'$stratum'(a, rule2);
+'$stratum'(b, rule3);
+
+% $stratum_dependency forms a DAG, no cycles allowed.
+% Each stratum contains set of rules, which are vertices in rule dependency graph.
+% Basically we specify DAG of subgraphs.
+%
+% We could specify exact rule ordering for computation,
+% use numbers for stratum identification instead of symbols,
+% but thay would introduce more order than necessary.
+%
+% Better to keep things unordered as long as it is possible,
+% to keep opportunities for optimization open.
+'$stratum_dependency'(b, a);
+
+
+% Okay, so I need to write stratification code in Dedalus
+% using negation and successor and then stratify it by hand.
+
+
+% Algorithm:
+% 1) find all leaf dependencies
+% 2) take first stratum number, assign it to leaf vertices
+% 3) if all children are positive and have stratum A, then vertex also has stratum A
+% 4) if vertex has negative child, where all children belong to A1, A2, ...,
+%    then vertex has stratum max(A1, A2, ...)+1
+% 5) if vertex belongs to cycle, when some of its children have stratum A1, A2, then its stratum is max(A1, A2, ...)+1
+
+
+
+dependency(Name1, Name2, Negated) <-
+  ast_clause(Name1, ClauseId, none),
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_atom(ExprId, Name2, Negated);
+
+initial_fact(Name) <-
+  ast_atom(Name, _AtomId, _Timestamp);
+
+
+
+path(Name1, Name2) <-
+  dependency(Name1, Name2, _Negated);
+path(Name1, Name2) <-
+  dependency(Name1, Name0, _Negated),
+  path(Name0, Name2);
+
+cycle(Name) <-
+  path(Name, Name);
+
+vertex(A) <-
+  dependency(A, _B, _Negated);
+vertex(B) <-
+  dependency(_A, B, _Negated);
+
+leaf(A) <-
+  vertex(A),
+  vertex(B),
+  not dependency(A, B, _Negated);
+
+% stratum_option computes one of the possible stratum numbers
+% that given vertex may have. In the end only max stratum would be selected.
+
+stratum_option(V, Stratum) <-
+  leaf(V),
+  Stratum = 1;
+stratum_option(V, Stratum) <-
+  % this stratum likely would be overshadowed
+  % by other rules. We need this for the case
+  % if we have network of self-referencing cycles
+  % that have no leaf vertices at all. In that case
+  % at least one initial_fact rule inside this subgraph
+  % would spread stratum across.
+  initial_fact(V),
+  Stratum = 1;
+stratum_option(Parent, Stratum) <-
+  % if we have negative child with stratum,
+  % then parent stratum must be at least +1
+  dependency(Parent, Child, Negated),
+  Negated = true,
+  stratum_option(Child, Stratum1),
+  successor(Stratum1, Stratum);
+stratum_option(Parent, Stratum) <-
+  % if have positive child, then just propagate its choosen stratum.
+  % if parent has negative children, then this propagated value
+  % will be disregared in favor of larger one.
+  dependency(Parent, Child, Negated),
+  Negated = false,
+  stratum_option(Child, Stratum);
+
+
+
+stratum_number(Name, max<Stratum>) <-
+  stratum_option(Name, Stratum);
+
+stratum(Name, StratumSym) <-
+  stratum_number(Name, Stratum),
+  symbol(Stratum, StratumSym);
+
+stratum_dependency(ParentStratum, ChildStratum) <-
+  dependency(Parent, Child, _Negated),
+  stratum(Parent, ParentStratum),
+  stratum(Child, ChildStratum);
+
+% It would be better to use symbols for stratums
+% to explicitly show that they are not ordered,
+% only stratum_dependency facts matter
+symbol(1, a); symbol(2, b); symbol(3, c); symbol(4, d); symbol(5, e);
+symbol(6, f); symbol(7, g); symbol(8, h); symbol(9, i); symbol(10, j);
+symbol(11, k); symbol(12, l); symbol(13, m); symbol(14, n); symbol(15, o);
+symbol(16, p); symbol(17, q); symbol(18, r); symbol(19, s); symbol(20, t);
+symbol(21, u); symbol(22, v); symbol(23, w); symbol(24, x); symbol(25, y);
+symbol(26, z);
