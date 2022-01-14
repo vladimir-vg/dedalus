@@ -12,15 +12,51 @@ import { runDeductively, prettyPrintFacts } from '../js_src/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
+
+const findTestcases = async ({ in_dir = '.', skip = [] }) => {
+  const testcaseRe = /^([a-zA-Z0-9_]+)\.test\.dedalus$/;
+  const dirPath = path.join(__dirname, in_dir);
+  const filenames0 = await fs.readdir(dirPath);
+  const filenames1 = filenames0
+    .filter(filename => testcaseRe.test(filename))
+    .filter(filename => {
+      const mustBeSkipped = _.some(skip, filename1 =>
+        _.isEqual(filename, `${filename1}.test.dedalus`));
+        const notATest = !testcaseRe.test(filename);
+        return !(mustBeSkipped || notATest);
+      });
+
+  const testcases = filenames1.map(filename => filename.match(testcaseRe)[1]);
+  return {
+    toRun: testcases.map(t => [t]),
+    toSkip: skip.map(t => [t])
+  };
+};
+
+const testcases = {};
+testcases.validator = await findTestcases({
+  in_dir: 'validator',
+  skip: [
+    'negated_not_in_positive',
+    'facts_without_timestamps',
+  ],
+});
+testcases.parser = await findTestcases({
+  in_dir: 'parser',
+  // skip: [
+  // ],
+});
+
+
+
 describe("validator", () => {
-  const testcases = [
-    ['time_suffix_not_in_async'],
-    ['negation_in_dep_cycle'],
-  
-    // we need negation support to run this testcase
-    // ['negated_not_in_positive'],
-  ];
-  test.each(testcases)('%s', async (name) => {
+  // just to report that there are skipped tests
+  if (testcases.validator.toSkip.length != 0) {
+    test.skip.each(testcases.validator.toSkip)('%s', async (name) => null);
+  }
+
+  test.each(testcases.validator.toRun)('%s', async (name) => {
     const inputPath = path.join(__dirname, `./validator/${name}.in.dedalus`);
     const matcherPath = path.join(__dirname, `./validator/${name}.test.dedalus`);
   
@@ -38,13 +74,11 @@ describe("validator", () => {
 
 
 describe('parser', () => {
-  const testcases = [
-    ['choose'],
-    ['broadcast'],
-    ['lamport_clock'],
-    ['various'],
-  ];
-  test.each(testcases)('%s', async (name) => {
+  // just to report that there are skipped tests
+  if (testcases.parser.toSkip.length != 0) {
+    test.skip.each(testcases.parser.toSkip)('%s', async (name) => null);
+  }
+  test.each(testcases.parser.toRun)('%s', async (name) => {
     const inputPath = path.join(__dirname, `./parser/${name}.in.dedalus`);
     const matcherPath = path.join(__dirname, `./parser/${name}.test.dedalus`);
   
