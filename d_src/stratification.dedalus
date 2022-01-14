@@ -1,17 +1,41 @@
-% This code takes ast facts and performes required stratification for negation.
-% It assumed that code is valid (no negation in dependency cycles).
+% This code takes ast facts and performes required stratification for negation and aggregation.
+% It assumed that code is valid (no negation or aggregation in dependency cycles).
 %
-% This way we can keep more parts of the interpreter written in Dedalus,
-% thus, easier to port, rewrite implementation to different language.
+% This way we can keep more parts of the interpreter written in Dedalus.
+% This way it would be easier to port and rewrite implementation in different language.
+%
+% This code has explicitly specified stratification $stratum and $stratum_dependency,
+% which makes it possible to execute it by semi-positive Datalog
 
-% This code is not executed by Dedalus, but by Semi-Positive Datalog,
-% which doesn't support negation for non-ground atoms.
-% In order it to work we explicitly write down stratification
-% of this code, which can be executed one by one.
+'$stratum'(a, ast_clause);
+'$stratum'(a, ast_body_expr);
+'$stratum'(a, ast_body_atom);
+'$stratum'(a, ast_atom);
+'$stratum'(a, ast_clause_var_arg);
+'$stratum'(a, ast_body_var_arg);
+'$stratum'(a, symbol);
+'$stratum'(a, initial_fact);
+'$stratum'(a, negated_dependency);
+'$stratum'(a, aggregated_dependency);
+'$stratum'(a, body_atom_uses_var);
+'$stratum'(a, aggregated_clause_var);
 
-'$stratum'(a, rule1);
-'$stratum'(a, rule2);
-'$stratum'(b, rule3);
+'$stratum'(b, path);
+'$stratum'(b, cycle);
+'$stratum'(b, vertex);
+'$stratum'(b, dependency);
+
+'$stratum'(c, leaf);
+'$stratum'(c, stratum_option);
+
+'$stratum'(d, stratum_number);
+'$stratum'(d, stratum);
+'$stratum'(d, stratum_dependency);
+
+'$stratum_dependency'(b, a);
+'$stratum_dependency'(c, b);
+'$stratum_dependency'(d, c);
+'$stratum_dependency'(d, a);
 
 % $stratum_dependency forms a DAG, no cycles allowed.
 % Each stratum contains set of rules, which are vertices in rule dependency graph.
@@ -40,34 +64,70 @@
 
 
 
-dependency(Name1, Name2, Negated) <-
-  ast_clause(Name1, ClauseId, none),
-  ast_body_expr(ClauseId, ExprId),
-  ast_body_atom(ExprId, Name2, Negated);
-
 initial_fact(Name) <-
   ast_atom(Name, _AtomId, _Timestamp);
 
+negated_dependency(Name1, Name2) <-
+  ast_clause(Name1, ClauseId, Suffix),
+  Suffix = none,
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_atom(ExprId, Name2, Negated),
+  Negated = true;
+
+aggregated_dependency(Name1, Name2) <-
+  ast_clause(Name1, ClauseId, Suffix),
+  Suffix = none,
+  % ast_body_expr(ClauseId, ExprId),
+  % ast_body_atom(ExprId, Name2, Negated),
+  aggregated_clause_var(ClauseId, VarName),
+  body_atom_uses_var(ClauseId, Name2, VarName);
+
+aggregated_clause_var(ClauseId, VarName) <-
+  ast_clause_var_arg(ClauseId, _ArgN, VarName, AggFunc, _LocPrefix),
+  AggFunc =/= none;
+
+body_atom_uses_var(ClauseId, Name, VarName) <-
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_atom(ExprId, Name, Negated),
+  ast_body_var_arg(ExprId, _ArgN, VarName, _LocPrefix);
+
+dependency(Name1, Name2, NeedStratumChange) <-
+  negated_dependency(Name1, Name2),
+  NeedStratumChange = true;
+dependency(Name1, Name2, NeedStratumChange) <-
+  aggregated_dependency(Name1, Name2),
+  NeedStratumChange = true;
+dependency(Name1, Name2, NeedStratumChange) <-
+  ast_clause(Name1, ClauseId, Suffix),
+  Suffix = none,
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_atom(ExprId, Name2, _Negated),
+
+  not negated_dependency(Name1, Name2),
+  not aggregated_dependency(Name1, Name2),
+  NeedStratumChange = false;
+
 
 
 path(Name1, Name2) <-
-  dependency(Name1, Name2, _Negated);
+  dependency(Name1, Name2, _NeedStratumChange);
 path(Name1, Name2) <-
-  dependency(Name1, Name0, _Negated),
+  dependency(Name1, Name0, _NeedStratumChange),
   path(Name0, Name2);
 
 cycle(Name) <-
   path(Name, Name);
 
 vertex(A) <-
-  dependency(A, _B, _Negated);
+  dependency(A, _B, _NeedStratumChange);
 vertex(B) <-
-  dependency(_A, B, _Negated);
+  dependency(_A, B, _NeedStratumChange);
 
 leaf(A) <-
   vertex(A),
   vertex(B),
-  not dependency(A, B, _Negated);
+  not dependency(A, B, true),
+  not dependency(A, B, false);
 
 % stratum_option computes one of the possible stratum numbers
 % that given vertex may have. In the end only max stratum would be selected.
@@ -76,27 +136,27 @@ stratum_option(V, Stratum) <-
   leaf(V),
   Stratum = 1;
 stratum_option(V, Stratum) <-
-  % this stratum likely would be overshadowed
+  % this stratum option likely would be overshadowed
   % by other rules. We need this for the case
   % if we have network of self-referencing cycles
-  % that have no leaf vertices at all. In that case
-  % at least one initial_fact rule inside this subgraph
-  % would spread stratum across.
+  % that have no edges with leaf vertices at all.
+  % In that case at least one initial_fact rule
+  % inside this subgraph would spread stratum across.
   initial_fact(V),
   Stratum = 1;
 stratum_option(Parent, Stratum) <-
   % if we have negative child with stratum,
   % then parent stratum must be at least +1
-  dependency(Parent, Child, Negated),
-  Negated = true,
+  dependency(Parent, Child, NeedStratumChange),
+  NeedStratumChange = true,
   stratum_option(Child, Stratum1),
   successor(Stratum1, Stratum);
 stratum_option(Parent, Stratum) <-
   % if have positive child, then just propagate its choosen stratum.
   % if parent has negative children, then this propagated value
   % will be disregared in favor of larger one.
-  dependency(Parent, Child, Negated),
-  Negated = false,
+  dependency(Parent, Child, NeedStratumChange),
+  NeedStratumChange = false,
   stratum_option(Child, Stratum);
 
 
@@ -109,7 +169,7 @@ stratum(Name, StratumSym) <-
   symbol(Stratum, StratumSym);
 
 stratum_dependency(ParentStratum, ChildStratum) <-
-  dependency(Parent, Child, _Negated),
+  dependency(Parent, Child, _NeedStratumChange),
   stratum(Parent, ParentStratum),
   stratum(Child, ChildStratum);
 
