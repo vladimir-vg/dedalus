@@ -20,7 +20,7 @@ const testcases = [
 ];
 test.each(testcases)('%s', async (name) => {
   const inputPath = path.join(__dirname, `./parser/${name}.in.dedalus`);
-  const matcherPath = path.join(__dirname, `./parser/${name}.dedalus`);
+  const matcherPath = path.join(__dirname, `./parser/${name}.test.dedalus`);
 
   const inputText = await fs.readFile(inputPath);
   const astFacts = await parseDedalus(inputText, `./parser/${name}.in.dedalus`);

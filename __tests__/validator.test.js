@@ -21,7 +21,7 @@ const testcases = [
 ];
 test.each(testcases)('%s', async (name) => {
   const inputPath = path.join(__dirname, `./validator/${name}.in.dedalus`);
-  const matcherPath = path.join(__dirname, `./validator/${name}.dedalus`);
+  const matcherPath = path.join(__dirname, `./validator/${name}.test.dedalus`);
 
   const inputText = await fs.readFile(inputPath);
   const validationFacts = await validateFile(inputText, `./validator/${name}.in.dedalus`);

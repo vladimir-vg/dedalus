@@ -1,0 +1,14 @@
+% these are not facts, since they don't have explicitly specified timestamp.
+% these are rules, that are always true.
+%
+% fact(one, two);
+%
+% is equivalent to:
+%
+% fact(one, two)@MinimalTimestamp;
+% fact(A, B)@next <- fact(A, B); 
+%
+% Where MinimalTimestmap value is choosen before we start the execution of the program
+
+this_is_always_true(1, 2, 3);
+also_aways_true;

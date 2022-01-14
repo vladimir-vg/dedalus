@@ -12,8 +12,6 @@ const runDedalusTest = async (expect, inputFacts, matcherText) => {
   const testPassedKeys = [...tupleMap.keys()].filter(key => key.startsWith('test_passed/'));
   const testFailedKeys = [...tupleMap.keys()].filter(key => key.startsWith('test_failed/'));
 
-  console.log(prettyPrintFacts(matchingFacts));
-
   // if we have test_failed, then failed
   // if we don't have any test_passed, then also failed
   // otherwise passed
@@ -21,6 +19,10 @@ const runDedalusTest = async (expect, inputFacts, matcherText) => {
     tupleMap.get(key).length !== 0);
   const hasAtLeastOnePass = _.some(testPassedKeys, key => 
     tupleMap.get(key).length !== 0);
+  
+  if (hasAtLeastOneFailure || !hasAtLeastOnePass) {
+    console.log(prettyPrintFacts(matchingFacts));
+  }
   
   expect(hasAtLeastOneFailure).toEqual(false);
   expect(hasAtLeastOnePass).toEqual(true);

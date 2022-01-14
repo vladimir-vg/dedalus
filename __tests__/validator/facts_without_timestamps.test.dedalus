@@ -1,0 +1,7 @@
+
+% should not trigger any errors
+
+test_passed;
+
+test_failed <-
+  has_errors;
