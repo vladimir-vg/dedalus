@@ -28,8 +28,5 @@
   },
   "devDependencies": {
     "jest": "^27.4.5"
-  },
-  "jest": {
-    "testRegex": "__tests__/.*\\.test\\.js$"
   }
 }
