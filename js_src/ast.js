@@ -92,9 +92,9 @@ const transformAtom = (tables, item, gensym, filename) => {
 
 
 
-const transformAtomCondition = (tables, bodyExpr, clauseId, gensym, filename) => {
+const transformBodyAtomExpr = (tables, bodyExpr, clauseId, gensym, filename) => {
   const exprId = {symbol: gensym('b')};
-  const { negated, name, args, time, line } = bodyExpr['AtomCondition'];
+  const { negated, name, args, time, line } = bodyExpr['BodyAtomExpr'];
   const intTime = [];
   const varTime = [];
   if (isVariable(time)) {
@@ -144,8 +144,8 @@ const transformAtomCondition = (tables, bodyExpr, clauseId, gensym, filename) =>
 
 
 
-const transformBinaryPredicateCondition = (tables, bodyExpr, clauseId, gensym, filename) => {
-  const { left, right, op, line } = bodyExpr['BinaryPredicateCondition'];
+const transformBinaryPredicateExpr = (tables, bodyExpr, clauseId, gensym, filename) => {
+  const { left, right, op, line } = bodyExpr['BinaryPredicateExpr'];
   const exprId = {symbol: gensym('b')};
 
   const varArgs = [];
@@ -183,8 +183,8 @@ const transformBinaryPredicateCondition = (tables, bodyExpr, clauseId, gensym, f
 
 
 
-const transformChooseCondition = (tables, bodyExpr, clauseId, gensym, filename) => {
-  const { line, keyvars, rowvars } = bodyExpr['ChooseCondition'];
+const transformChooseExpr = (tables, bodyExpr, clauseId, gensym, filename) => {
+  const { line, keyvars, rowvars } = bodyExpr['ChooseExpr'];
   const exprId = {symbol: gensym('b')};
 
   const varToTuple = (arg, argN) =>
@@ -208,12 +208,12 @@ const transformChooseCondition = (tables, bodyExpr, clauseId, gensym, filename) 
 
 
 const transformBodyExpr = (tables, bodyExpr, clauseId, gensym, filename) => {
-  if ('AtomCondition' in bodyExpr) {
-    return transformAtomCondition(tables, bodyExpr, clauseId, gensym, filename);
-  } else if ('BinaryPredicateCondition' in bodyExpr) {
-    return transformBinaryPredicateCondition(tables, bodyExpr, clauseId, gensym, filename);
-  } else if ('ChooseCondition' in bodyExpr) {
-    return transformChooseCondition(tables, bodyExpr, clauseId, gensym, filename);
+  if ('BodyAtomExpr' in bodyExpr) {
+    return transformBodyAtomExpr(tables, bodyExpr, clauseId, gensym, filename);
+  } else if ('BinaryPredicateExpr' in bodyExpr) {
+    return transformBinaryPredicateExpr(tables, bodyExpr, clauseId, gensym, filename);
+  } else if ('ChooseExpr' in bodyExpr) {
+    return transformChooseExpr(tables, bodyExpr, clauseId, gensym, filename);
   }
 
   throw new Error(`Unknown body rule item: ${JSON.stringify(bodyExpr)}`);

@@ -36,51 +36,51 @@ RuleHeadWithArgs = name:Symbol "(" WhiteSpace? args:HeadArguments WhiteSpace? ")
 	return { name: name['symbol'], args: args };
 }
 RuleBody
-	= cond:RuleCondition WhiteSpace? "," ToSkip? rest:RuleBody { return [cond].concat(rest); }
-	/ cond:RuleCondition { return [cond]; }
-RuleCondition = ChooseCondition / AtomCondition / BinaryPredicateCondition
+	= cond:BodyExpr WhiteSpace? "," ToSkip? rest:RuleBody { return [cond].concat(rest); }
+	/ cond:BodyExpr { return [cond]; }
+BodyExpr = ChooseExpr / BodyAtomExpr / BinaryPredicateExpr
 
-ChooseCondition
+ChooseExpr
 	= "choose(" WhiteSpace? "(" keyvars:VarList ")" WhiteSpace? ","
       WhiteSpace? "(" rowvars:VarList ")" WhiteSpace? ")" {
       	const line = location().start.line;
-      	return { ChooseCondition: { keyvars: keyvars, rowvars: rowvars, line: line } };
+      	return { ChooseExpr: { keyvars: keyvars, rowvars: rowvars, line: line } };
       }
 VarList = var1:VariableWithoutLocPrefix WhiteSpace? "," WhiteSpace? rest:VarList {
 			return [var1].concat(rest);
 		  }
 		/ var1:VariableWithoutLocPrefix { return [var1]; }
 
-BinaryPredicateCondition = left:Value WhiteSpace? op:Operator WhiteSpace? right:Value {
+BinaryPredicateExpr = left:Value WhiteSpace? op:Operator WhiteSpace? right:Value {
 	const line = location().start.line;
-    return { BinaryPredicateCondition: {left: left, op: op, right: right, line: line} };
+    return { BinaryPredicateExpr: {left: left, op: op, right: right, line: line} };
 }
 
-AtomCondition
-	= "notin" WhiteSpace atom:AtomCondition1 {
+BodyAtomExpr
+	= "notin" WhiteSpace atom:BodyAtomExpr1 {
     	const line = location().start.line;
     	return {
-        AtomCondition: { ...atom['AtomCondition'], negated: true, line: line }
+        BodyAtomExpr: { ...atom['BodyAtomExpr'], negated: true, line: line }
       };
     }
-    / atom:AtomCondition1 {
+    / atom:BodyAtomExpr1 {
     	const line = location().start.line;
     	return {
-        AtomCondition: { ...atom['AtomCondition'], negated: false, line: line }
+        BodyAtomExpr: { ...atom['BodyAtomExpr'], negated: false, line: line }
       };
     }
-AtomCondition1
+BodyAtomExpr1
 	= name:Symbol "(" args:BodyArguments ")" "@" time:IntegerValue {
-    	return { AtomCondition: { name: name, args: args, time: time } };
+    	return { BodyAtomExpr: { name: name, args: args, time: time } };
     }
     / name:Symbol "(" args:BodyArguments ")" {
-    	return { AtomCondition: { name: name, args: args, time: null } };
+    	return { BodyAtomExpr: { name: name, args: args, time: null } };
     }
     / name:Symbol "@" time:IntegerValue {
-    	return { AtomCondition: { name: name, args: [], time: time } };
+    	return { BodyAtomExpr: { name: name, args: [], time: time } };
     }
     / name:Symbol {
-    	return { AtomCondition: { name: name, args: [], time: null } };
+    	return { BodyAtomExpr: { name: name, args: [], time: null } };
     }
 
 
