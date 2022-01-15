@@ -1,0 +1,12 @@
+
+% should not trigger any errors
+
+test_passed :-
+  ast_clause_location(_Filename, _L, ClauseId1),
+  ast_clause(this_is_always_true, ClauseId1, none),
+    ast_clause_sym_arg(ClauseId1, 0, one),
+    ast_clause_int_arg(ClauseId1, 1, 2),
+    ast_clause_str_arg(ClauseId1, 2, "three"),
+
+  ast_clause_location(_Filename, _L, ClauseId2),
+  ast_clause(also_aways_true, ClauseId2, none);

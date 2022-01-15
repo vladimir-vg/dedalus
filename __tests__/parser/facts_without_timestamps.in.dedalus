@@ -10,5 +10,5 @@
 %
 % Where MinimalTimestmap value is choosen before we start the execution of the program
 
-this_is_always_true(1, 2, 3);
+this_is_always_true(one, 2, "three");
 also_aways_true;

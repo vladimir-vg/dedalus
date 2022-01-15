@@ -39,7 +39,7 @@ testcases.validator = await findTestcases({
   in_dir: 'validator',
   skip: [
     'negated_not_in_positive',
-    'facts_without_timestamps',
+    // 'facts_without_timestamps',
   ],
 });
 testcases.parser = await findTestcases({
