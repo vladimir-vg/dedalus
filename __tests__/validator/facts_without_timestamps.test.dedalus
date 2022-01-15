@@ -3,5 +3,5 @@
 
 test_passed;
 
-test_failed <-
+test_failed :-
   has_errors;

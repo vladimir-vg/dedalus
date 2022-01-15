@@ -61,17 +61,17 @@
 
 
 
-initial_fact(Name) <-
+initial_fact(Name) :-
   ast_atom(Name, _AtomId, _Timestamp);
 
-negated_dependency(Name1, Name2) <-
+negated_dependency(Name1, Name2) :-
   ast_clause(Name1, ClauseId, Suffix),
   Suffix = none,
   ast_body_expr(ClauseId, ExprId),
   ast_body_atom(ExprId, Name2, Negated),
   Negated = true;
 
-aggregated_dependency(Name1, Name2) <-
+aggregated_dependency(Name1, Name2) :-
   ast_clause(Name1, ClauseId, Suffix),
   Suffix = none,
   % ast_body_expr(ClauseId, ExprId),
@@ -79,60 +79,60 @@ aggregated_dependency(Name1, Name2) <-
   aggregated_clause_var(ClauseId, VarName),
   body_atom_uses_var(ClauseId, Name2, VarName);
 
-aggregated_clause_var(ClauseId, VarName) <-
+aggregated_clause_var(ClauseId, VarName) :-
   ast_clause_var_arg(ClauseId, _ArgN, VarName, AggFunc, _LocPrefix),
   AggFunc =/= none;
 
-body_atom_uses_var(ClauseId, Name, VarName) <-
+body_atom_uses_var(ClauseId, Name, VarName) :-
   ast_body_expr(ClauseId, ExprId),
   ast_body_atom(ExprId, Name, Negated),
   ast_body_var_arg(ExprId, _ArgN, VarName, _LocPrefix);
 
-dependency(Name1, Name2, NeedStratumChange) <-
+dependency(Name1, Name2, NeedStratumChange) :-
   negated_dependency(Name1, Name2),
   NeedStratumChange = true;
-dependency(Name1, Name2, NeedStratumChange) <-
+dependency(Name1, Name2, NeedStratumChange) :-
   aggregated_dependency(Name1, Name2),
   NeedStratumChange = true;
-dependency(Name1, Name2, NeedStratumChange) <-
+dependency(Name1, Name2, NeedStratumChange) :-
   ast_clause(Name1, ClauseId, Suffix),
   Suffix = none,
   ast_body_expr(ClauseId, ExprId),
   ast_body_atom(ExprId, Name2, _Negated),
 
-  not negated_dependency(Name1, Name2),
-  not aggregated_dependency(Name1, Name2),
+  notin negated_dependency(Name1, Name2),
+  notin aggregated_dependency(Name1, Name2),
   NeedStratumChange = false;
 
 
 
-path(Name1, Name2) <-
+path(Name1, Name2) :-
   dependency(Name1, Name2, _NeedStratumChange);
-path(Name1, Name2) <-
+path(Name1, Name2) :-
   dependency(Name1, Name0, _NeedStratumChange),
   path(Name0, Name2);
 
-cycle(Name) <-
+cycle(Name) :-
   path(Name, Name);
 
-vertex(A) <-
+vertex(A) :-
   dependency(A, _B, _NeedStratumChange);
-vertex(B) <-
+vertex(B) :-
   dependency(_A, B, _NeedStratumChange);
 
-leaf(A) <-
+leaf(A) :-
   vertex(A),
   vertex(B),
-  not dependency(A, B, true),
-  not dependency(A, B, false);
+  notin dependency(A, B, true),
+  notin dependency(A, B, false);
 
 % stratum_option computes one of the possible stratum numbers
 % that given vertex may have. In the end only max stratum would be selected.
 
-stratum_option(V, Stratum) <-
+stratum_option(V, Stratum) :-
   leaf(V),
   Stratum = 1;
-stratum_option(V, Stratum) <-
+stratum_option(V, Stratum) :-
   % this stratum option likely would be overshadowed
   % by other rules. We need this for the case
   % if we have network of self-referencing cycles
@@ -141,14 +141,14 @@ stratum_option(V, Stratum) <-
   % inside this subgraph would spread stratum across.
   initial_fact(V),
   Stratum = 1;
-stratum_option(Parent, Stratum) <-
+stratum_option(Parent, Stratum) :-
   % if we have negative child with stratum,
   % then parent stratum must be at least +1
   dependency(Parent, Child, NeedStratumChange),
   NeedStratumChange = true,
   stratum_option(Child, Stratum1),
   successor(Stratum1, Stratum);
-stratum_option(Parent, Stratum) <-
+stratum_option(Parent, Stratum) :-
   % if have positive child, then just propagate its choosen stratum.
   % if parent has negative children, then this propagated value
   % will be disregared in favor of larger one.
@@ -158,14 +158,14 @@ stratum_option(Parent, Stratum) <-
 
 
 
-stratum_number(Name, max<Stratum>) <-
+stratum_number(Name, max<Stratum>) :-
   stratum_option(Name, Stratum);
 
-stratum(Name, StratumSym) <-
+stratum(Name, StratumSym) :-
   stratum_number(Name, Stratum),
   symbol(Stratum, StratumSym);
 
-stratum_dependency(ParentStratum, ChildStratum) <-
+stratum_dependency(ParentStratum, ChildStratum) :-
   dependency(Parent, Child, _NeedStratumChange),
   stratum(Parent, ParentStratum),
   stratum(Child, ChildStratum);

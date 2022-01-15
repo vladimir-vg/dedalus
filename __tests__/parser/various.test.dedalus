@@ -1,4 +1,4 @@
-test_passed <-
+test_passed :-
   ast_atom_location("./parser/various.in.dedalus", _L, AtomId1),
   ast_atom(no_fields_fact, AtomId1, 100),
 

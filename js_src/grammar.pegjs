@@ -19,9 +19,9 @@ RuleWithBody = head:RuleHead suffix:SuffixAndArrow ToSkip? body:RuleBody WhiteSp
     };
 }
 SuffixAndArrow
-	= suffix:"@next" WhiteSpace? "<-" { return suffix; }
-    / suffix:"@async" WhiteSpace? "<-" { return suffix; }
-    / WhiteSpace? "<-" { return null; }
+	= suffix:"@next" WhiteSpace? ":-" { return suffix; }
+    / suffix:"@async" WhiteSpace? ":-" { return suffix; }
+    / WhiteSpace? ":-" { return null; }
 RuleWithoutBody = head:RuleHead ";" {
 	return {
     	Rule: {
@@ -57,7 +57,7 @@ BinaryPredicateCondition = left:Value WhiteSpace? op:Operator WhiteSpace? right:
 }
 
 AtomCondition
-	= "not" WhiteSpace atom:AtomCondition1 {
+	= "notin" WhiteSpace atom:AtomCondition1 {
     	const line = location().start.line;
     	return {
         AtomCondition: { ...atom['AtomCondition'], negated: true, line: line }

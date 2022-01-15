@@ -1,4 +1,4 @@
-test_passed <-
+test_passed :-
   ast_atom_location("./parser/choose.in.dedalus", _, AtomId1),
   ast_atom(student, AtomId1, 5),
     ast_atom_sym_arg(AtomId1, 0, 'JimBlack'),

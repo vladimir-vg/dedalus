@@ -1,7 +1,7 @@
-test_passed <-
+test_passed :-
   err_negation_in_dep_cycle(_Filename, 10, q),
   err_negation_in_dep_cycle(_Filename, 11, p),
   err_negation_in_dep_cycle(_Filename, 14, p1);
 
-test_failed <-
+test_failed :-
   err_negation_in_dep_cycle(_Filename, _L, link);

@@ -1,4 +1,4 @@
-test_passed <-
+test_passed :-
   ast_clause_location("./parser/broadcast.in.dedalus", _, ClauseId1),
   ast_clause(sbcast, ClauseId1, '@async'),
     ast_clause_var_arg(ClauseId1, 0, 'Member', none, true),
