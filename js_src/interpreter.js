@@ -11,8 +11,9 @@ const collectValuesFromFacts = (ast, selectors) => {
   selectors.forEach(({ key, keep, selectValue, selectIndex }) => {
     (ast.get(key) ?? []).forEach(row => {
       if (!keep(row)) { return; }
+      // index is 1-based
       const index = selectIndex(row);
-      result[index] = selectValue(row);
+      result[index-1] = selectValue(row);
     });
   });
   return result;

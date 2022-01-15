@@ -68,8 +68,8 @@ const transformAtom = (tables, item, gensym, filename) => {
   const symArgs = [];
   const strArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [atomId, argN, arg];
-    if (isSymbol(arg)) { symArgs.push([atomId, argN, argToSymbol(arg)]); }
+    const tuple = [atomId, argN+1, arg];
+    if (isSymbol(arg)) { symArgs.push([atomId, argN+1, argToSymbol(arg)]); }
     else if (isInteger(arg)) { intArgs.push(tuple); }
     else if (isString(arg)) { strArgs.push(tuple); }
     else {
@@ -108,13 +108,13 @@ const transformBodyAtomExpr = (tables, bodyExpr, clauseId, gensym, filename) => 
   const strArgs = [];
   const symArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [exprId, argN, arg];
+    const tuple = [exprId, argN+1, arg];
     if (isSymbol(arg)) {
-      symArgs.push([exprId, argN, argToSymbol(arg)]);
+      symArgs.push([exprId, argN+1, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
       const { Variable: { location } } = arg;
       varArgs.push([
-        exprId, argN, argToSymbol(arg), boolToSymbol(location)
+        exprId, argN+1, argToSymbol(arg), boolToSymbol(location)
       ]);
     } else if (isInteger(arg)) { intArgs.push(tuple); }
     else if (isString(arg)) { strArgs.push(tuple); }
@@ -151,11 +151,11 @@ const transformBinaryPredicateExpr = (tables, bodyExpr, clauseId, gensym, filena
   const varArgs = [];
   const intArgs = [];
   [left, right].forEach((arg, argN) => {
-    const tuple = [exprId, argN, arg];
+    const tuple = [exprId, argN+1, arg];
     if (isVariable(arg)) {
       const { location } = arg;
       varArgs.push([
-        exprId, argN, argToSymbol(arg), boolToSymbol(location)
+        exprId, argN+1, argToSymbol(arg), boolToSymbol(location)
       ]);
     }
     else if (isInteger(arg)) { intArgs.push(tuple); }
@@ -188,7 +188,7 @@ const transformChooseExpr = (tables, bodyExpr, clauseId, gensym, filename) => {
   const exprId = {symbol: gensym('b')};
 
   const varToTuple = (arg, argN) =>
-    [exprId, argN, argToSymbol(arg)];
+    [exprId, argN+1, argToSymbol(arg)];
   const keyVars = keyvars.map(varToTuple);
   const rowVars = rowvars.map(varToTuple);
 
@@ -230,14 +230,14 @@ const transformRule = (tables, item, gensym, filename) => {
   const strArgs = [];
   const symArgs = [];
   args.forEach((arg, argN) => {
-    const tuple = [clauseId, argN, arg];
+    const tuple = [clauseId, argN+1, arg];
     if (isSymbol(arg)) {
-      symArgs.push([clauseId, argN, argToSymbol(arg)]);
+      symArgs.push([clauseId, argN+1, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
       const { Variable: { location, afunc } } = arg;
       const afunc1 = {symbol: (afunc ?? 'none')};
       varArgs.push([
-        clauseId, argN, argToSymbol(arg),
+        clauseId, argN+1, argToSymbol(arg),
         afunc1, boolToSymbol(location)
       ]);
     } else if (isInteger(arg)) { intArgs.push(tuple); }
