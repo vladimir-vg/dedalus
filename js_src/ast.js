@@ -28,16 +28,16 @@ const boolToSymbol = (val) => {
 };
 
 
-const mergeFactsDeep = (facts1, facts2) => {
+const mergeTFactsDeep = (tFacts1, tFacts2) => {
   const toAdd = [];
-  [...facts2].forEach(([t, newMap]) => {
-    const oldMap = facts1.get(t) ?? (new Map());
-    toAdd.push([t, mergeTupleMapDeep(oldMap, newMap)]);
+  [...tFacts2].forEach(([t, newMap]) => {
+    const oldMap = tFacts1.get(t) ?? (new Map());
+    toAdd.push([t, mergeFactsDeep(oldMap, newMap)]);
   });
-  return (new Map([...facts1, ...toAdd]));
+  return (new Map([...tFacts1, ...toAdd]));
 };
 
-const mergeTupleMapDeep = (facts, addition) => {
+const mergeFactsDeep = (facts, addition) => {
   const toAdd = [];
 
   let entries;
@@ -77,7 +77,7 @@ const transformAtom = (tables, item, gensym, filename) => {
     }
   });
 
-  return mergeTupleMapDeep(tables, {
+  return mergeFactsDeep(tables, {
     'ast_atom_location/3': [
       [filename, line, atomId]
     ],
@@ -123,7 +123,7 @@ const transformBodyAtomExpr = (tables, bodyExpr, clauseId, gensym, filename) => 
     }
   });
 
-  return mergeTupleMapDeep(tables, {
+  return mergeFactsDeep(tables, {
     'ast_body_expr_location/3': [
       [filename, line, exprId]
     ],
@@ -166,7 +166,7 @@ const transformBinaryPredicateExpr = (tables, bodyExpr, clauseId, gensym, filena
     }
   });
 
-  return mergeTupleMapDeep(tables, {
+  return mergeFactsDeep(tables, {
     'ast_body_expr_location/3': [
       [filename, line, exprId]
     ],
@@ -192,7 +192,7 @@ const transformChooseExpr = (tables, bodyExpr, clauseId, gensym, filename) => {
   const keyVars = keyvars.map(varToTuple);
   const rowVars = rowvars.map(varToTuple);
 
-  return mergeTupleMapDeep(tables, {
+  return mergeFactsDeep(tables, {
     'ast_body_expr_location/3': [
       [filename, line, exprId]
     ],
@@ -252,7 +252,7 @@ const transformRule = (tables, item, gensym, filename) => {
   }, tables);
 
   const suffix1 = {symbol: suffix ?? 'none'};
-  return mergeTupleMapDeep(tables1, {
+  return mergeFactsDeep(tables1, {
     'ast_clause_location/3': [
       [filename, line, clauseId]
     ],
@@ -398,10 +398,11 @@ const extractMetadata = (astTFacts0) => {
 
   if (facts.get('$meta stratum/2')) {
     const vertices = _.groupBy(
-      facts.get('$meta stratum/2'),
+      facts.get('$meta stratum/2').map(([s, r]) => [s['symbol'], r['symbol']]),
       ([stratum, rule]) => stratum);
-    const edges = facts.get('$meta stratum_dependency/2') ?? [];
-    explicitStrata = { vertices, edges };
+    const edges = facts.get('$meta stratum_dependency/2')
+      .map(([s1, s2]) => [s1['symbol'], s2['symbol']]);
+    explicitStrata = { vertices, edges: (edges ?? []) };
   }
 
   return { explicitStrata, astTFacts };
@@ -410,8 +411,8 @@ const extractMetadata = (astTFacts0) => {
 
 
 export {
+  mergeTFactsDeep,
   mergeFactsDeep,
-  mergeTupleMapDeep,
   tree2facts,
   sourceFactsFromAstFacts,
   rulesFromAstFacts,

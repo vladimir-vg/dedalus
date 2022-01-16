@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import { mergeTupleMapDeep } from '../ast.js';
+import { mergeFactsDeep } from '../ast.js';
 import { Table } from './table.js';
 
 
@@ -153,6 +153,8 @@ class Interpreter {
     this.timestamp = initialTimestamp;
     this.rules = rules;
 
+    console.log({ strata })
+
     // facts persisted for current timestamp
     this.prevTickFacts = null;
     this.upcomingTickFacts = new Map();
@@ -165,7 +167,7 @@ class Interpreter {
 
   insertFactsForNextTick(facts) {
     // console.log({ facts })
-    this.upcomingTickFacts = mergeTupleMapDeep(this.upcomingTickFacts, facts);
+    this.upcomingTickFacts = mergeFactsDeep(this.upcomingTickFacts, facts);
     // console.log(this.upcomingTickFacts);
   }
 
@@ -176,16 +178,16 @@ class Interpreter {
     let newTuplesCount = 0;
 
     do {
-      const currentFacts = mergeTupleMapDeep(this.upcomingTickFacts, accumulatedFacts);
+      const currentFacts = mergeFactsDeep(this.upcomingTickFacts, accumulatedFacts);
       const newFacts = produceFactsUsingDeductiveRules(this.rules, currentFacts);
 
-      accumulatedFacts = mergeTupleMapDeep(accumulatedFacts, newFacts);
+      accumulatedFacts = mergeFactsDeep(accumulatedFacts, newFacts);
       
       newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
       // debugger
     } while (newTuplesCount > 0);
     // debugger
-    return mergeTupleMapDeep(this.upcomingTickFacts, accumulatedFacts);
+    return mergeFactsDeep(this.upcomingTickFacts, accumulatedFacts);
   }
 
   tick() {
