@@ -249,7 +249,9 @@ predicate_dependency(Name1, Name2, Negated, Filename, Line) :-
   ast_body_atom(ExprId, Name2, Negated),
   ast_body_expr_location(Filename, Line, ExprId);
 
-
+%%%
+%%%
+%%%
 
 err_time_suffix_not_in_async_rule(Filename, Line, Name) :-
   ast_clause_location(Filename, _Line, ClauseId),
@@ -263,6 +265,12 @@ body_atom_has_time_suffix(ExprId) :-
   ast_body_atom_var_time(ExprId, _VarName);
 body_atom_has_time_suffix(ExprId) :-
   ast_body_atom_int_time(ExprId, _Value);
+
+%%%
+%%%
+%%%
+
+% err_range_unrestricted_variable(Filename, Line, VarName) :-
 
 
 

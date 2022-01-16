@@ -337,14 +337,15 @@ const sourceFactsFromAstFacts = (astFacts) => {
           .filter(([atomId1, n, val]) => (atomId1 == atomId))
           .forEach(aTuple => {
             const [_atomId, n, val] = aTuple;
-            resultTuple[n] = val;
+            resultTuple[n-1] = val;
           });
       });
 
       // just to make sure that there weren't any gaps in arguments entries.
       for (let i=0; i<resultTuple.length; i++) {
         if (resultTuple[i] === undefined) {
-          throw new Error(`got empty value at ${i} for ${atomN}th ${name}`);
+          console.log({ resultTuple })
+          throw new Error(`got empty value at ${i} for ${atomId['symbol']} atom, '${name['symbol']}' rule`);
         }
       }
 
@@ -378,10 +379,41 @@ const rulesFromAstFacts = (astFacts) => {
 
 
 
+const extractMetadata = (astTFacts0) => {
+  // all facts and rules prefixed with '$meta' carry
+  // some metainformation about the code
+  //
+  // These facts and rules should not be accessible from
+  // other rules. That's why we extract them here.
+
+  const astFacts = new Map(
+    [...astTFacts0.get(AST_TIMESTAMP)].filter(([key, tuples]) =>
+      key.split(' ')[0] != '$meta'));
+  const astTFacts = new Map([[AST_TIMESTAMP, astFacts]]);
+  
+  let explicitStrata = null;
+
+  const META_INFO_TIMESTAMP = 0;
+  const facts = sourceFactsFromAstFacts(astTFacts0).get(META_INFO_TIMESTAMP) ?? (new Map());
+
+  if (facts.get('$meta stratum/2')) {
+    const vertices = _.groupBy(
+      facts.get('$meta stratum/2'),
+      ([stratum, rule]) => stratum);
+    const edges = facts.get('$meta stratum_dependency/2') ?? [];
+    explicitStrata = { vertices, edges };
+  }
+
+  return { explicitStrata, astTFacts };
+};
+
+
+
 export {
   mergeFactsDeep,
   mergeTupleMapDeep,
   tree2facts,
   sourceFactsFromAstFacts,
   rulesFromAstFacts,
+  extractMetadata
 }

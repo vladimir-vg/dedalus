@@ -15,6 +15,11 @@ const __dirname = path.dirname(__filename);
 
 
 const findTestcases = async ({ in_dir = '.', skip = [] }) => {
+  // user may specify testcases to skip that are
+  // not in folder anymore. Would be misleading
+  // to show them report, so check which were actually skipped
+  const actuallySkipped = [];
+
   const testcaseRe = /^([a-zA-Z0-9_]+)\.test\.dedalus$/;
   const dirPath = path.join(__dirname, in_dir);
   const filenames0 = await fs.readdir(dirPath);
@@ -24,28 +29,38 @@ const findTestcases = async ({ in_dir = '.', skip = [] }) => {
       const mustBeSkipped = _.some(skip, filename1 =>
         _.isEqual(filename, `${filename1}.test.dedalus`));
         const notATest = !testcaseRe.test(filename);
+        if (mustBeSkipped) {
+          actuallySkipped.push(filename.match(testcaseRe)[1]);
+        }
         return !(mustBeSkipped || notATest);
       });
 
   const testcases = filenames1.map(filename => filename.match(testcaseRe)[1]);
   return {
     toRun: testcases.map(t => [t]),
-    toSkip: skip.map(t => [t])
+    toSkip: actuallySkipped.map(t => [t])
   };
 };
+
+
 
 const testcases = {};
 testcases.validator = await findTestcases({
   in_dir: 'validator',
   skip: [
     'negated_not_in_positive',
-    // 'facts_without_timestamps',
   ],
 });
 testcases.parser = await findTestcases({
   in_dir: 'parser',
   // skip: [
   // ],
+});
+testcases.eval = await findTestcases({
+  in_dir: 'eval',
+  skip: [
+    'successor',
+  ],
 });
 
 
@@ -90,6 +105,22 @@ describe('parser', () => {
   
     const matcherText = await fs.readFile(matcherPath);
     await runDedalusTest(astFacts, matcherText);
+  });
+});
+
+
+
+describe('eval', () => {
+  // just to report that there are skipped tests
+  if (testcases.eval.toSkip.length != 0) {
+    test.skip.each(testcases.eval.toSkip)('%s', async (name) => null);
+  }
+  test.each(testcases.eval.toRun)('%s', async (name) => {
+    const matcherPath = path.join(__dirname, `./eval/${name}.test.dedalus`);
+    const matcherText = await fs.readFile(matcherPath);
+    debugger
+    const inputFacts = (new Map([]));
+    await runDedalusTest(inputFacts, matcherText);
   });
 });
 

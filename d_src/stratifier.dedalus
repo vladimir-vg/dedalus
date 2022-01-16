@@ -4,37 +4,32 @@
 % This code has explicitly specified stratification $stratum and $stratum_dependency,
 % which makes it possible to execute it by semi-positive Datalog.
 
-'$stratum'(a, ast_clause);
-'$stratum'(a, ast_body_expr);
-'$stratum'(a, ast_body_atom);
-'$stratum'(a, ast_atom);
-'$stratum'(a, ast_clause_var_arg);
-'$stratum'(a, ast_body_var_arg);
-'$stratum'(a, symbol);
-'$stratum'(a, initial_fact);
-'$stratum'(a, negated_dependency);
-'$stratum'(a, aggregated_dependency);
-'$stratum'(a, body_atom_uses_var);
-'$stratum'(a, aggregated_clause_var);
+'$meta stratum'(a, ast_clause)@0;
+'$meta stratum'(a, ast_body_expr)@0;
+'$meta stratum'(a, ast_body_atom)@0;
+'$meta stratum'(a, ast_atom)@0;
+'$meta stratum'(a, ast_clause_var_arg)@0;
+'$meta stratum'(a, ast_body_var_arg)@0;
+'$meta stratum'(a, symbol)@0;
+'$meta stratum'(a, initial_fact)@0;
+'$meta stratum'(a, negated_dependency)@0;
+'$meta stratum'(a, aggregated_dependency)@0;
+'$meta stratum'(a, body_atom_uses_var)@0;
+'$meta stratum'(a, aggregated_clause_var)@0;
 
-'$stratum'(b, path);
-'$stratum'(b, cycle);
-'$stratum'(b, vertex);
-'$stratum'(b, dependency);
+'$meta stratum'(b, path)@0;
+'$meta stratum'(b, cycle)@0;
+'$meta stratum'(b, vertex)@0;
+'$meta stratum'(b, dependency)@0;
 
-'$stratum'(c, leaf);
-'$stratum'(c, stratum_option);
+'$meta stratum'(c, leaf)@0;
+'$meta stratum'(c, stratum_option)@0;
 
-'$stratum'(d, stratum_number);
-'$stratum'(d, stratum);
-'$stratum'(d, stratum_dependency);
+'$meta stratum'(d, stratum_number)@0;
+'$meta stratum'(d, stratum)@0;
+'$meta stratum'(d, stratum_dependency)@0;
 
-'$stratum_dependency'(b, a);
-'$stratum_dependency'(c, b);
-'$stratum_dependency'(d, c);
-'$stratum_dependency'(d, a);
-
-% $stratum_dependency forms a DAG, no cycles allowed.
+% $meta stratum_dependency forms a DAG, no cycles allowed.
 % Each stratum contains set of rules, which are vertices in rule dependency graph.
 % Basically we specify DAG of subgraphs.
 %
@@ -44,7 +39,11 @@
 %
 % Better to keep things unordered as long as it is possible,
 % to keep opportunities for optimization open.
-'$stratum_dependency'(b, a);
+'$meta stratum_dependency'(b, a)@0;
+'$meta stratum_dependency'(c, b)@0;
+'$meta stratum_dependency'(d, c)@0;
+'$meta stratum_dependency'(d, a)@0;
+
 
 
 % Okay, so I need to write stratification code in Dedalus

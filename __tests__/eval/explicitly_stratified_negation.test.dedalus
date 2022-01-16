@@ -1,0 +1,34 @@
+'$meta stratum'(first, edge)@0;
+'$meta stratum'(first, vertex)@0;
+
+'$meta stratum'(second, top)@0;
+'$meta stratum'(second, test_passed)@0;
+'$meta stratum'(second, test_failed)@0;
+
+'$meta stratum_dependency'(second, first)@0;
+
+
+
+edge(1, 2);
+edge(2, 3);
+edge(2, 4);
+edge(-1, 2);
+edge(1, 5);
+edge(4, 6);
+
+vertex(A) :- edge(A, _);
+vertex(A) :- edge(_, A);
+
+top(A) :-
+  vertex(A),
+  vertex(B),
+  notin edge(B, A);
+
+test_passed :-
+  top(1),
+  top(-1);
+
+test_failed(A) :-
+  top(A),
+  A =/= 1,
+  A =/= -1;

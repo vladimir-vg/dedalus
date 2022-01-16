@@ -1,0 +1,18 @@
+
+% A = B * C composition
+% comp(A, B, C);
+%
+% Let's take a look at S_3
+%
+% 1, x, x^2, y, xy, x^2 y
+%
+% production rules: x^3 = 1, y^2 = 1, yx = x^2 y
+element('1')@0;
+element('x')@0;
+element('y')@0;
+
+% in order to produce new elements, we need to pick ids for them.
+% we could do it one by one, using successor.
+% it would be more correct to use symbols, that doesn't imply any ordering
+% we also could pick several symbols at once, ensuring that they are different via
+% choose expression.

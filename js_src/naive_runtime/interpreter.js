@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import { mergeTupleMapDeep } from './ast.js';
+import { mergeTupleMapDeep } from '../ast.js';
 import { Table } from './table.js';
 
 
@@ -149,7 +149,7 @@ const produceFactsUsingDeductiveRules = (astRules, facts) => {
 
 
 class Interpreter {
-  constructor(initialTimestamp, rules) {
+  constructor({ initialTimestamp, rules, strata }) {
     this.timestamp = initialTimestamp;
     this.rules = rules;
 
@@ -165,7 +165,7 @@ class Interpreter {
 
   insertFactsForNextTick(facts) {
     // console.log({ facts })
-    this.upcomingTickFacts = mergeTupleMapDeep  (this.upcomingTickFacts, facts);
+    this.upcomingTickFacts = mergeTupleMapDeep(this.upcomingTickFacts, facts);
     // console.log(this.upcomingTickFacts);
   }
 

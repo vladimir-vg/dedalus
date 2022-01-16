@@ -4,11 +4,13 @@ import fs from 'fs/promises';
 import peg from 'peggy';
 
 import {
-  sourceFactsFromAstFacts, tree2facts, rulesFromAstFacts, mergeFactsDeep
+  sourceFactsFromAstFacts, tree2facts, rulesFromAstFacts, mergeFactsDeep,
+  extractMetadata,
 } from './ast.js';
 import { prettyPrintFacts } from './prettyprint.js';
 
-import { Interpreter } from './interpreter.js';
+import { Interpreter } from './naive_runtime/interpreter.js';
+import _ from 'lodash';
 
 
 
@@ -31,20 +33,60 @@ const parseDedalus = async (dedalusText, filename) => {
 
 
 
+const computeStrata = (ast) => {
+  // for now must lump everything into one strata.
+  // it is correct for programs that limit to deductive rules without negation or aggregation
+
+  // TODO: run stratifier to obtain proper stata
+
+  const allAtomNames = [...ast].flatMap(([key, tuples]) => {
+    switch (key) {
+      case 'ast_atom/3':
+      case 'ast_clause/3':
+        return tuples.map(t => t[0]);
+      case 'ast_body_atom/3':
+        return tuples.map(t => t[1]);
+      default: return [];
+    }
+  });
+  const vertices = {'statum1': allAtomNames};
+  const edges = [];
+  return { vertices, edges };
+};
+
+
+
 const runDeductively = async (inputFacts, dedalusText, path) => {
-  const astFacts = await parseDedalus(dedalusText, path);
+  const astFactsT0 = await parseDedalus(dedalusText, path);
+  const { explicitStrata, astTFacts } = extractMetadata(astFactsT0);
+
+  // TODO: validate ast
 
   // better to explicitly separate facts from rules
   // give interpreter only rules, provide facts from outside
   // this way it is less messy
-  const rules = rulesFromAstFacts(astFacts);
-  const factsFromSource = sourceFactsFromAstFacts(astFacts);
-  const facts = mergeFactsDeep(inputFacts, factsFromSource);
-  const initialTimestamp = [...facts.keys()].reduce((t1, t2) => Math.min(t1,t2), 1);
-  const runtime = new Interpreter(initialTimestamp-1, rules);
+  const rules = rulesFromAstFacts(astTFacts);
 
-  runtime.insertFactsForNextTick(facts.get(initialTimestamp));
+  // facts with timestamps that are present in source.
+  const factsFromSource = sourceFactsFromAstFacts(astTFacts);
+  // We need to insert these facts as input, when the timestamp is right
+  const facts = mergeFactsDeep(inputFacts, factsFromSource);
+  const DEFAULT_INITIAL_TIMESTAMP = 1;
+  const initialTimestamp = [...facts.keys()].reduce((t1, t2) =>
+    Math.min(t1,t2), DEFAULT_INITIAL_TIMESTAMP);
+
+  // if we don't have explicit strata, we need to compute it
+  let strata = explicitStrata ?? computeStrata(rules);
+
+  const initialFacts = facts.get(initialTimestamp) ?? (new Map());
+  const runtime = new Interpreter({
+    rules, strata,
+    initialTimestamp: initialTimestamp-1,
+  });
+
+  runtime.insertFactsForNextTick(initialFacts);
   const newFacts = runtime.deductFacts();
+
   return (new Map([[initialTimestamp, newFacts]]));
 };
 
