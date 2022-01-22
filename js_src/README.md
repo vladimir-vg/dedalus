@@ -1,6 +1,6 @@
 The idea is to have several implementations of Dedalus, some of which may use existing Datalog engines underneath (Souffle, DataScript, etc.).
 
-Each implementation gonna have its own `*_runtime` directory, with source code independent from other implementation.
+Each implementation gonna have its own `*_runtime` directory, with source code independent from other implementations.
 
 # Glossary
 

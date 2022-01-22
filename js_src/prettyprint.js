@@ -292,7 +292,7 @@ const prettyPrintAST = (astFacts) => {
   // order by filename.
 
   const orderedIds = atomsAndClausesByFileAndLineNum(astFacts);
-debugger
+
   const lines0 = [...orderedIds].flatMap(([filename, ids]) => {
     const lines = ids.flatMap(arg => {
       const { atomId, clauseId } = arg;

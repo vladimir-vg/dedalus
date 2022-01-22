@@ -43,9 +43,9 @@ const computeStrata = (ast) => {
     switch (key) {
       case 'ast_atom/3':
       case 'ast_clause/3':
-        return tuples.map(t => t[0]);
+        return tuples.map(t => t[0]['symbol']);
       case 'ast_body_atom/3':
-        return tuples.map(t => t[1]);
+        return tuples.map(t => t[1]['symbol']);
       default: return [];
     }
   });

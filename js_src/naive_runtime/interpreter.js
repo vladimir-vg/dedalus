@@ -20,7 +20,7 @@ const collectBodyFacts = (ast, clauseId) => {
         });
     
     if (!bodyFact) { return; }
-    const [_id, name, _n] = bodyFact;
+    const [_id, name, negated] = bodyFact;
 
     const keep = (row) => _.isEqual(row[0], exprId);
     const getPairSimpleValue = ([id, index, value]) => [index, value];
@@ -36,7 +36,8 @@ const collectBodyFacts = (ast, clauseId) => {
 
     const key = `${name['symbol']}/${params.length}`;
 
-    items.push({ key, params });
+    const isNegated = (negated['symbol'] == 'true');
+    items.push({ key, params, isNegated });
   });
 
   return items;
@@ -99,23 +100,21 @@ const prepareDeductiveClauses = (ast) => {
 
 
 
-const produceFactsUsingDeductiveRules = (astRules, facts) => {
+const produceFactsUsingDeductiveRules = (clauses, facts) => {
   // Just walk all inductive rules (not @async and not @next)
   // one by one and produce all possible new facts from given facts
 
-  // collect all inductive rules
-  // { key, params, bodyFacts: [{ key, params }, ...], bodyConditions: [[a, op, b], ...] }
-  // conditions must come after facts in the body
-  
-  const clauses = prepareDeductiveClauses(astRules);
-
   return clauses.reduce((newFacts, clause) => {
     const { key, params, bodyFacts, bodyConditions } = clause;
-    const tables = bodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
-    const table0 = tables.reduce((t1, t2) => t1.join(t2));
+    const positiveBodyFacts = bodyFacts.filter(({ isNegated }) => !isNegated);
+    const negativeBodyFacts = bodyFacts.filter(({ isNegated }) => isNegated);
+    const positiveTables = positiveBodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
+    const negativeTables = negativeBodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
+    const table0 = positiveTables.reduce((t1, t2) => t1.naturalJoin(t2));
     const table1 = table0.select(bodyConditions);
+    const table2 = negativeTables.reduce((acc, t) => acc.antijoin(t), table1);
 
-    const rows = table1.projectColumns(params);
+    const rows = table2.projectColumns(params);
 
     // remove rows that are already present
     // so we would return only new facts
@@ -130,12 +129,54 @@ const produceFactsUsingDeductiveRules = (astRules, facts) => {
 
 
 
+const getStratumComputationOrder = ({ vertices, edges }) => {
+  // there might be several execution orders
+  // just pick any for now
+  const result = [];
+  let edges0 = edges.slice();
+  const leftoverStrata = Object.keys(vertices);
+
+  while (edges0.length !== 0 && leftoverStrata.length !== 0) {
+    // pick an option and check that nothing depends on it
+    const index = _.findIndex(leftoverStrata, (stratum) => {
+      return !edges0.some(([parent, child]) => parent == stratum);
+    });
+    const stratum = leftoverStrata[index];
+    result.push(stratum);
+    leftoverStrata.splice(index, 1);
+    edges0 = edges0.filter(([parent, child]) => child !== stratum);
+  }
+
+  return [...result, ...leftoverStrata];
+};
+
+const getRulesForStratum = (astRules, strata, stratum) => {
+  const { vertices } = strata;
+  const whitelist = vertices[stratum];
+
+  const filteredAstRules = (new Map([...astRules].map(([key, tuples]) => {
+    switch (key) {
+      case 'ast_clause/3':
+        const filteredTuples = tuples.filter(t => {
+          const [name1, _id, _suffix] = t;
+          const [name, _arity] = name1['symbol'].split('/');
+          return whitelist.some(e => e == name);
+        });
+        return [key, filteredTuples];
+      default: return [key, tuples];
+    }
+  })));
+// debugger
+  return filteredAstRules;
+};
+
+
+
 class Interpreter {
   constructor({ initialTimestamp, rules, strata }) {
     this.timestamp = initialTimestamp;
     this.rules = rules;
-
-    // console.log({ strata })
+    this.strata = strata;
 
     // facts persisted for current timestamp
     this.prevTickFacts = null;
@@ -148,27 +189,28 @@ class Interpreter {
   // }
 
   insertFactsForNextTick(facts) {
-    // console.log({ facts })
     this.upcomingTickFacts = mergeFactsDeep(this.upcomingTickFacts, facts);
-    // console.log(this.upcomingTickFacts);
   }
 
-  // this call computes all deductive facts (classic Datalog)
-  // doesn't support negation for now
   deductFacts() {
-    let accumulatedFacts = new Map();
-    let newTuplesCount = 0;
+    let accumulatedFacts = this.upcomingTickFacts;
+    const stOrder = getStratumComputationOrder(this.strata);
+    stOrder.forEach(stratum => {
+      let newTuplesCount = 0;
+  
+      const rules = getRulesForStratum(this.rules, this.strata, stratum);
+      // collect all deductive rules
+      // { key, params, bodyFacts: [{ key, params }, ...], bodyConditions: [[a, op, b], ...] }
+      // conditions must come after facts in the body
+      const clauses = prepareDeductiveClauses(rules);
+  
+      do {
+        const newFacts = produceFactsUsingDeductiveRules(clauses, accumulatedFacts);
+        accumulatedFacts = mergeFactsDeep(accumulatedFacts, newFacts);
+        newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
+      } while (newTuplesCount > 0);
+    });
 
-    do {
-      const currentFacts = mergeFactsDeep(this.upcomingTickFacts, accumulatedFacts);
-      const newFacts = produceFactsUsingDeductiveRules(this.rules, currentFacts);
-
-      accumulatedFacts = mergeFactsDeep(accumulatedFacts, newFacts);
-      
-      newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
-      // debugger
-    } while (newTuplesCount > 0);
-    // debugger
     return mergeFactsDeep(this.upcomingTickFacts, accumulatedFacts);
   }
 

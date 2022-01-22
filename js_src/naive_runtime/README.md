@@ -1,1 +1,1 @@
-In this directory contains simplest possible implementation of Dedalus. The idea is to make a slow but correct implementation, that other implementations may check against.
+In this directory contains simplest possible full-featured bottom-up implementation of Dedalus.

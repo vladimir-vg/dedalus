@@ -90,6 +90,22 @@ const joinTables = (table1, table2) => {
 };
 
 
+const antijoinTables = (table1, table2) => {
+  // remove all rows from table1 that have at least one match in table2
+  const sharedColumns = _.intersection(table1.columns, table2.columns);
+  const rows = table1.rows.filter(row1 => {
+    const sharedPairs1 = projectRowValues(row1, table1.columns, sharedColumns);
+    const hasMatching = table2.rows.some(row2 => {
+      const sharedPairs2 = projectRowValues(row2, table2.columns, sharedColumns);
+      return _.isEqual(sharedPairs1, sharedPairs2);
+    });
+    return !hasMatching;
+  });
+  const { columns } = table1;
+  return { rows, columns };
+}
+
+
 
 const extractPairFromCondition = (cond) => {
   const [a, op, b] = cond;
@@ -191,9 +207,13 @@ class Table {
     this.rows = rows;
   }
 
-  // natural join
-  join(table2) {
+  naturalJoin(table2) {
     const { rows, columns } = joinTables(this, table2);
+    return new Table(columns, rows);
+  }
+
+  antijoin(table2) {
+    const { rows, columns } = antijoinTables(this, table2);
     return new Table(columns, rows);
   }
 
@@ -204,14 +224,13 @@ class Table {
       throw new Error(`Tables should not have shared columns for cross-product`);
     }
 
-    return this.join(table2);
+    return this.naturalJoin(table2);
   }
 
   projectColumns(columns) {
     const hasUnknownColumn = _.some(columns, col =>
       (typeof col == 'string') && !this.columns.includes(col));
     if (hasUnknownColumn) {
-      debugger
       // we are requested project a column name that is not present
       throw new Error(`Unexpected columns to project ${JSON.stringify(columns)} from ${JSON.stringify(this.columns)}`);
     }
