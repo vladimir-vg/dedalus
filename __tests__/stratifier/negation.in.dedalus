@@ -1,0 +1,20 @@
+link(a, b)@1;
+link(b, c)@1;
+link(c, c)@1;
+link(c, d)@1;
+
+node(X) :- link(X, _);
+node(Y) :- link(_, Y);
+
+unreachable(X, Y) :-
+  node(X),
+  node(Y),
+  notin reachable(X, Y);
+
+reachable(X,Y) :-
+  link(X, Y);
+
+reachable(X,Y) :-
+  link(X,Z),
+  reachable(Z,Y);
+

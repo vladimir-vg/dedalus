@@ -1,0 +1,12 @@
+
+test_passed :-
+  stratum(St, link),
+  stratum(St, reachable),
+  stratum(St, node);
+
+test_failed(Rule) :-
+  % there is nothing that can be in the same stratum as unreachable
+  % it is computed the last
+  stratum(St, unreachable),
+  stratum(St, Rule),
+  Rule =/= unreachable;
