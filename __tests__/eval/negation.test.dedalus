@@ -5,25 +5,28 @@ link(b, c)@1;
 link(c, c)@1;
 link(c, d)@1;
 
-reachable(X,Y) <-
+node(X) :- link(X, _);
+node(Y) :- link(_, Y);
+
+unreachable(X, Y) :-
+  node(X),
+  node(Y),
+  notin reachable(X, Y);
+
+reachable(X,Y) :-
   link(X, Y);
 
-reachable(X,Y) <-
+reachable(X,Y) :-
   link(X,Z),
   reachable(Z,Y);
 
-node(X) <- link(X, _);
-node(Y) <- link(_, Y);
-
-% unreachable(X, Y) <-
-%   node(X),
-%   node(Y),
-%   not reachable(X, Y);
-
-
-
-test_passed <-
+test_passed :-
   reachable(a, d),
   reachable(a, c),
+  reachable(b, d),
   unreachable(d, a),
   unreachable(c, b);
+
+test_failed(A, B) :-
+  reachable(A, B),
+  unreachable(A, B);
