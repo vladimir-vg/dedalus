@@ -419,7 +419,6 @@ const extractMetadata = (astTFacts0) => {
   const facts = sourceFactsFromAstFacts(astTFacts0).get(META_INFO_TIMESTAMP) ?? (new Map());
 
   if (facts.get('$meta stratum/2')) {
-
     const vertices0 = _.groupBy(
       (facts.get('$meta stratum/2') ?? []).map(([s, r]) => [s['symbol'], r['symbol']]),
       ([stratum, rule]) => stratum);
@@ -428,7 +427,7 @@ const extractMetadata = (astTFacts0) => {
       (items) => items.map(([st, rule]) => rule));
     const edges = (facts.get('$meta stratum_dependency/2') ?? [])
       .map(([s1, s2]) => [s1['symbol'], s2['symbol']]);
-    explicitStrata = { vertices, edges: (edges ?? []) };
+    explicitStrata = { vertices, edges };
   }
   return { explicitStrata, astTFacts };
 };

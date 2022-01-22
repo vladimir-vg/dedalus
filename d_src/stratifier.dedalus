@@ -172,9 +172,9 @@ stratum_dependency(ParentStratum, ChildStratum) :-
 % It would be better to use symbols for stratums
 % to explicitly show that they are not ordered,
 % only stratum_dependency define ordering
-symbol(1, a); symbol(2, b); symbol(3, c); symbol(4, d); symbol(5, e);
-symbol(6, f); symbol(7, g); symbol(8, h); symbol(9, i); symbol(10, j);
-symbol(11, k); symbol(12, l); symbol(13, m); symbol(14, n); symbol(15, o);
-symbol(16, p); symbol(17, q); symbol(18, r); symbol(19, s); symbol(20, t);
-symbol(21, u); symbol(22, v); symbol(23, w); symbol(24, x); symbol(25, y);
-symbol(26, z);
+symbol(1, a)@1; symbol(2, b)@1; symbol(3, c)@1; symbol(4, d)@1; symbol(5, e)@1;
+symbol(6, f)@1; symbol(7, g)@1; symbol(8, h)@1; symbol(9, i)@1; symbol(10, j)@1;
+symbol(11, k)@1; symbol(12, l)@1; symbol(13, m)@1; symbol(14, n)@1; symbol(15, o)@1;
+symbol(16, p)@1; symbol(17, q)@1; symbol(18, r)@1; symbol(19, s)@1; symbol(20, t)@1;
+symbol(21, u)@1; symbol(22, v)@1; symbol(23, w)@1; symbol(24, x)@1; symbol(25, y)@1;
+symbol(26, z)@1;

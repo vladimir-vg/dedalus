@@ -60,6 +60,7 @@ testcases.eval = await findTestcases({
   in_dir: 'eval',
   skip: [
     'successor',
+    'negation',
   ],
 });
 
@@ -133,8 +134,8 @@ const runDedalusTest = async (inputFacts, matcherText, opts = {}) => {
   const lastTimestamp = [...matchingTFacts.keys()].reduce((t1, t2) => Math.max(t1,t2));
   const matchingFacts = matchingTFacts.get(lastTimestamp);
 
-  const testPassedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_passed/'));
-  const testFailedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_failed/'));
+  const testPassedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_passed'));
+  const testFailedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_failed'));
 
   // if we have test_failed, then failed
   // if we don't have any test_passed, then also failed

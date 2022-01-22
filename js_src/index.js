@@ -19,6 +19,7 @@ const __dirname = path.dirname(__filename);
 
 const grammarPath = path.join(__dirname, 'grammar.pegjs');
 const validatorPath = path.join(__dirname, '..', 'd_src', 'validator.dedalus');
+const stratifierPath = path.join(__dirname, '..', 'd_src', 'stratifier.dedalus');
 
 
 
@@ -33,13 +34,24 @@ const parseDedalus = async (dedalusText, filename) => {
 
 
 
-const computeStrata = (ast) => {
+const computeStrata = async (sourceAst) => {
+  // const stratifierDedalusText = await fs.readFile(stratifierPath);
+  // const facts = await runDeductively(sourceAst, stratifierDedalusText, stratifierPath);
+
+  // const vertices0 = _.groupBy(
+  //   (facts.get('stratum/2') ?? []).map(([s, r]) => [s['symbol'], r['symbol']]),
+  //   ([stratum, rule]) => stratum);
+  // const vertices = _.mapValues(
+  //   vertices0,
+  //   (items) => items.map(([st, rule]) => rule));
+  // const edges = (facts.get('stratum_dependency/2') ?? [])
+  //   .map(([s1, s2]) => [s1['symbol'], s2['symbol']]);
+
+  // return { vertices, edges };
+
   // for now must lump everything into one strata.
   // it is correct for programs that limit to deductive rules without negation or aggregation
-
-  // TODO: run stratifier to obtain proper stata
-
-  const allAtomNames = [...ast].flatMap(([key, tuples]) => {
+  const allAtomNames = [...sourceAst].flatMap(([key, tuples]) => {
     switch (key) {
       case 'ast_atom/3':
       case 'ast_clause/3':
@@ -76,7 +88,7 @@ const runDeductively = async (inputFacts, dedalusText, path) => {
     Math.min(t1,t2), DEFAULT_INITIAL_TIMESTAMP);
 
   // if we don't have explicit strata, we need to compute it
-  let strata = explicitStrata ?? computeStrata(rules);
+  let strata = explicitStrata ?? await computeStrata(rules);
 
   const initialFacts = facts.get(initialTimestamp) ?? (new Map());
   const runtime = new Interpreter({

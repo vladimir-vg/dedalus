@@ -1,0 +1,57 @@
+'$meta stratum'(first, person)@0;
+
+'$meta stratum'(second, max_by_first)@0;
+'$meta stratum'(second, top_by_first)@0;
+'$meta stratum'(second, sum_group_by_first)@0;
+'$meta stratum'(second, test_failed_max_first)@0;
+'$meta stratum'(second, sum_group_by_first)@0;
+
+'$meta stratum'(third, min_by_second_among_max_by_first)@0;
+'$meta stratum'(third, test_passed)@0;
+'$meta stratum'(third, min_by_second_among_max_by_first)@0;
+
+'$meta stratum_dependency'(second, first)@0;
+'$meta stratum_dependency'(third, second)@0;
+
+
+
+person(alice,  1,   -105,  3  )@10;
+person(bob,    100,  25,   5  )@10;
+person(chris, -1,    30,   13 )@10;
+person(ivan,   100, -100,  1  )@10;
+
+top_by_first(Name) :-
+  person(Name, A, _B, _C),
+  max_by_first(A);
+
+max_by_first(max<A>) :-
+  person(_Name, A, _B, _C);
+
+min_by_second_among_max_by_first(min<B>) :-
+  max_by_first(A),
+  person(_Name, A, B, _C);
+
+sum_group_by_first(A, sum<B>) :-
+  person(_Name, A, B, _C);
+
+
+
+test_passed :-
+  max_by_first(100),
+  min_by_second_among_max_by_first(-100),
+  top_by_first(bob),
+  top_by_first(ivan),
+  sum_group_by_first(100, -75),
+  sum_group_by_first(1, 2);
+
+test_failed_max_first(A) :-
+  max_by_first(A),
+  A =/= 100;
+
+test_failed_min_second(B) :-
+  min_by_second_among_max_by_first(B),
+  B =/= -100;
+
+test_failed_wrong_sum(S) :-
+  sum_group_by_first(100, S),
+  S =/= -75;
