@@ -28,6 +28,8 @@ test_passed :-
       ast_body_var_arg(ExprId3, 2, 'B', false),
 
 
+
+
   ast_clause_location("./parser/lamport_clock.in.dedalus", _L, ClauseId3),
   ast_clause(p_wait, ClauseId3, '@async'),
     ast_clause_var_arg(ClauseId3, 1, 'A', none, false),

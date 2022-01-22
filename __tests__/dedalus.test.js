@@ -4,8 +4,8 @@ import fs from 'fs/promises';
 
 import _ from 'lodash';
 
-import { validateFile, parseDedalus } from '../js_src/index.js';
-import { runDeductively, prettyPrintFacts } from '../js_src/index.js';
+import { validateFile, parseDedalus, runDeductively } from '../js_src/index.js';
+import {prettyPrintFacts, prettyPrintAST } from '../js_src/index.js';
 
 
 
@@ -82,7 +82,7 @@ describe("validator", () => {
     // we need to supply them as facts and run the matcher code
   
     const matcherText = await fs.readFile(matcherPath);
-    await runDedalusTest(validationFacts, matcherText);
+    await runDedalusTest(validationFacts, matcherText, { inputHasAST: true });
   });
 });
 
@@ -104,7 +104,7 @@ describe('parser', () => {
     // we need to supply them as facts and run the matcher code
   
     const matcherText = await fs.readFile(matcherPath);
-    await runDedalusTest(astFacts, matcherText);
+    await runDedalusTest(astFacts, matcherText, { inputHasAST: true });
   });
 });
 
@@ -118,7 +118,7 @@ describe('eval', () => {
   test.each(testcases.eval.toRun)('%s', async (name) => {
     const matcherPath = path.join(__dirname, `./eval/${name}.test.dedalus`);
     const matcherText = await fs.readFile(matcherPath);
-    debugger
+
     const inputFacts = (new Map([]));
     await runDedalusTest(inputFacts, matcherText);
   });
@@ -126,24 +126,30 @@ describe('eval', () => {
 
 
 
-const runDedalusTest = async (inputFacts, matcherText) => {
-  const matchingFacts = await runDeductively(inputFacts, matcherText, '*matcher*');
-  const lastTimestamp = [...matchingFacts.keys()].reduce((t1, t2) => Math.max(t1,t2));
-  const tupleMap = matchingFacts.get(lastTimestamp);
+const runDedalusTest = async (inputFacts, matcherText, opts = {}) => {
+  const { inputHasAST } = opts;
 
-  const testPassedKeys = [...tupleMap.keys()].filter(key => key.startsWith('test_passed/'));
-  const testFailedKeys = [...tupleMap.keys()].filter(key => key.startsWith('test_failed/'));
+  const matchingTFacts = await runDeductively(inputFacts, matcherText, '*matcher*');
+  const lastTimestamp = [...matchingTFacts.keys()].reduce((t1, t2) => Math.max(t1,t2));
+  const matchingFacts = matchingTFacts.get(lastTimestamp);
+
+  const testPassedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_passed/'));
+  const testFailedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_failed/'));
 
   // if we have test_failed, then failed
   // if we don't have any test_passed, then also failed
   // otherwise passed
   const hasAtLeastOneFailure = _.some(testFailedKeys, key => 
-    tupleMap.get(key).length !== 0);
+    matchingFacts.get(key).length !== 0);
   const hasAtLeastOnePass = _.some(testPassedKeys, key => 
-    tupleMap.get(key).length !== 0);
+    matchingFacts.get(key).length !== 0);
   
   if (hasAtLeastOneFailure || !hasAtLeastOnePass) {
-    console.log(prettyPrintFacts(matchingFacts));
+    console.log(prettyPrintFacts(matchingTFacts));
+
+    if (inputHasAST) {
+      console.log(prettyPrintAST(matchingFacts))
+    }
   }
   
   expect(hasAtLeastOneFailure).toEqual(false);

@@ -30,15 +30,15 @@ const collectBodyFacts = (ast, clauseId) => {
         (ast.get('ast_body_atom/3') ?? []),
         (fTuple) => {
           const [exprId2, _name, _n] = fTuple;
-          return (exprId == exprId2);
+          return _.isEqual(exprId, exprId2);
         });
     
     if (!bodyFact) { return; }
-    const [_r1, name, _n] = bodyFact;
+    const [_id, name, _n] = bodyFact;
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[0] == exprId),
+      keep: (row) => _.isEqual(row[0], exprId),
       selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
       selectIndex: (row) => row[1],
     });
@@ -67,7 +67,7 @@ const collectBodyConditions = (ast, clauseId) => {
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[0] == exprId),
+      keep: (row) => _.isEqual(row[0], exprId),
       selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
       selectIndex: (row) => row[1],
     });
@@ -94,7 +94,7 @@ const prepareDeductiveClauses = (ast) => {
 
     const valueCollector = (key, isVar) => ({
       key,
-      keep: (row) => (row[0] == clauseId),
+      keep: (row) => _.isEqual(row[0], clauseId),
       selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
       selectIndex: (row) => row[1],
     });
@@ -153,7 +153,7 @@ class Interpreter {
     this.timestamp = initialTimestamp;
     this.rules = rules;
 
-    console.log({ strata })
+    // console.log({ strata })
 
     // facts persisted for current timestamp
     this.prevTickFacts = null;

@@ -7,7 +7,7 @@ import {
   sourceFactsFromAstFacts, tree2facts, rulesFromAstFacts, mergeTFactsDeep,
   extractMetadata,
 } from './ast.js';
-import { prettyPrintFacts } from './prettyprint.js';
+import { prettyPrintFacts, prettyPrintAST } from './prettyprint.js';
 
 import { Interpreter } from './naive_runtime/interpreter.js';
 import _ from 'lodash';
@@ -157,5 +157,6 @@ export {
   runFile,
   validateFile,
   prettyPrintFacts,
+  prettyPrintAST,
   runDeductively,
 }

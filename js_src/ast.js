@@ -283,7 +283,7 @@ const transformItem = (tables, item, gensym, filename) => {
 
 const makeGensymFunc = (filename) => {
   const rand = seedrandom(filename);
-  const digits = 3;
+  const digits = 5;
   return (prefix) => `${prefix}${Math.floor(rand()*(10**digits))}`;
 };
 
@@ -361,9 +361,9 @@ const sourceFactsFromAstFacts = (astFacts) => {
 
 
 
-const rulesFromAstFacts = (astFacts) => {
-  const tupleMap = astFacts.get(AST_TIMESTAMP);
-  const rulesTupleMap = new Map([...tupleMap].filter(([key, _tuples]) => {
+const rulesFromAstFacts = (astTFacts) => {
+  const astFacts = astTFacts.get(AST_TIMESTAMP);
+  const rulesFacts = new Map([...astFacts].filter(([key, _tuples]) => {
     switch (key) {
       case 'ast_atom/3':
       case 'ast_atom_sym_arg/3':
@@ -374,7 +374,7 @@ const rulesFromAstFacts = (astFacts) => {
         return true;
     }
   }));
-  return rulesTupleMap;
+  return rulesFacts;
 };
 
 

@@ -211,6 +211,7 @@ class Table {
     const hasUnknownColumn = _.some(columns, col =>
       (typeof col == 'string') && !this.columns.includes(col));
     if (hasUnknownColumn) {
+      debugger
       // we are requested project a column name that is not present
       throw new Error(`Unexpected columns to project ${JSON.stringify(columns)} from ${JSON.stringify(this.columns)}`);
     }
