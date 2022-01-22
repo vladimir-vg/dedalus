@@ -283,8 +283,10 @@ const transformItem = (tables, item, gensym, filename) => {
 
 const makeGensymFunc = (filename) => {
   const rand = seedrandom(filename);
-  const digits = 5;
-  return (prefix) => `${prefix}${Math.floor(rand()*(10**digits))}`;
+  return (prefix) => {
+    const randomId = rand().toString(36).substring(2,10);
+    return `${prefix}_${randomId}`;
+  };
 };
 
 // produce sets of tuples for each rule
@@ -309,7 +311,7 @@ const tree2facts = (tree, filename) => {
 
 
 
-const sourceFactsFromAstFacts = (astFacts) => {
+const sourceFactsFromAstFacts = (astTFacts) => {
   // we need to walk following facts
   // and assemble facts that they are describing:
   //
@@ -318,23 +320,23 @@ const sourceFactsFromAstFacts = (astFacts) => {
   // ast_atom_int_arg/3
   // ast_atom_str_arg/3
 
-  const tuples = astFacts.get(AST_TIMESTAMP);
+  const astFacts = astTFacts.get(AST_TIMESTAMP);
 
   const output = new Map();
-  (tuples.get('ast_atom/3') ?? [])
+  (astFacts.get('ast_atom/3') ?? [])
     .forEach(fTuple => {
       const [name, atomId, sourceTimestamp] = fTuple;
 
-      const tuplesMap = (output.get(sourceTimestamp) ?? (new Map()));
-      output.set(sourceTimestamp, tuplesMap);
+      const facts = (output.get(sourceTimestamp) ?? (new Map()));
+      output.set(sourceTimestamp, facts);
 
       // now let's find all arguments and insert them into array
       const resultTuple = []; // first element is timestamp
 
       const argNames = ['ast_atom_sym_arg/3', 'ast_atom_int_arg/3', 'ast_atom_str_arg/3'];
       argNames.forEach(name => {
-        (tuples.get(name) ?? [])
-          .filter(([atomId1, n, val]) => (atomId1 == atomId))
+        (astFacts.get(name) ?? [])
+          .filter(([atomId1, n, val]) => (_.isEqual(atomId1, atomId)))
           .forEach(aTuple => {
             const [_atomId, n, val] = aTuple;
             resultTuple[n-1] = val;
@@ -351,9 +353,9 @@ const sourceFactsFromAstFacts = (astFacts) => {
 
       // at this point, we collected all values into resultTuple.
       const key = `${name.symbol}/${resultTuple.length}`;
-      const currentTuples = (tuplesMap.get(key) ?? []);
+      const currentTuples = (facts.get(key) ?? []);
       currentTuples.push(resultTuple);
-      tuplesMap.set(key, currentTuples);
+      facts.set(key, currentTuples);
     });
 
   return output;
@@ -387,8 +389,28 @@ const extractMetadata = (astTFacts0) => {
   // other rules. That's why we extract them here.
 
   const astFacts = new Map(
-    [...astTFacts0.get(AST_TIMESTAMP)].filter(([key, tuples]) =>
-      key.split(' ')[0] != '$meta'));
+    [...astTFacts0.get(AST_TIMESTAMP)].map(([key, tuples]) => {
+      switch (key) {
+        case 'ast_atom/3':
+          {
+            const filteredTuples = tuples.filter(
+              ([name, id, timestamp]) => 
+              !name['symbol'].startsWith('$meta '));
+            return [key, filteredTuples];
+          }
+            
+        case 'ast_clause/3':
+          {
+            const filteredTuples = tuples.filter(
+              ([name, id, suffix]) => 
+                !name['symbol'].startsWith('$meta '));
+            return [key, filteredTuples];
+          }
+
+        default: return [key, tuples];
+      }
+    }));
+
   const astTFacts = new Map([[AST_TIMESTAMP, astFacts]]);
   
   let explicitStrata = null;
@@ -397,14 +419,17 @@ const extractMetadata = (astTFacts0) => {
   const facts = sourceFactsFromAstFacts(astTFacts0).get(META_INFO_TIMESTAMP) ?? (new Map());
 
   if (facts.get('$meta stratum/2')) {
-    const vertices = _.groupBy(
-      facts.get('$meta stratum/2').map(([s, r]) => [s['symbol'], r['symbol']]),
+
+    const vertices0 = _.groupBy(
+      (facts.get('$meta stratum/2') ?? []).map(([s, r]) => [s['symbol'], r['symbol']]),
       ([stratum, rule]) => stratum);
-    const edges = facts.get('$meta stratum_dependency/2')
+    const vertices = _.mapValues(
+      vertices0,
+      (items) => items.map(([st, rule]) => rule));
+    const edges = (facts.get('$meta stratum_dependency/2') ?? [])
       .map(([s1, s2]) => [s1['symbol'], s2['symbol']]);
     explicitStrata = { vertices, edges: (edges ?? []) };
   }
-
   return { explicitStrata, astTFacts };
 };
 

@@ -68,9 +68,9 @@ const runDeductively = async (inputFacts, dedalusText, path) => {
   const rules = rulesFromAstFacts(astTFacts);
 
   // facts with timestamps that are present in source.
-  const factsFromSource = sourceFactsFromAstFacts(astTFacts);
+  const tFactsFromSource = sourceFactsFromAstFacts(astTFacts);
   // We need to insert these facts as input, when the timestamp is right
-  const facts = mergeTFactsDeep(inputFacts, factsFromSource);
+  const facts = mergeTFactsDeep(inputFacts, tFactsFromSource);
   const DEFAULT_INITIAL_TIMESTAMP = 1;
   const initialTimestamp = [...facts.keys()].reduce((t1, t2) =>
     Math.min(t1,t2), DEFAULT_INITIAL_TIMESTAMP);

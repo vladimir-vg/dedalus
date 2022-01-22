@@ -47,16 +47,17 @@ const prettyPrintValue = (value) => {
 const prettyPrintFacts = (tFacts) => {
   const lines = [...tFacts].flatMap(([timestamp, facts]) => {
     return [...facts].flatMap(([key, tuples]) => {
-      const [name, _arity] = key.split('/');
+      const [name1, _arity] = key.split('/');
+      const name = {symbol: name1};
       return tuples.map(args => {
         if (args.length === 0) {
-          return `${name}@${timestamp};`;
+          return `${ppSymbol(name)}@${ppInt(timestamp)};`;
         }
   
         const args1 = args
           .map(prettyPrintValue)
           .reduce((acc, part) => acc.concat(`, ${part}`));
-        return `${name}(${args1})@${timestamp};`;
+        return `${ppSymbol(name)}(${args1})@${ppInt(timestamp)};`;
       });
     });
   });
