@@ -1,5 +1,7 @@
 import _ from "lodash";
 
+import { collectListFromFacts } from './ast.js';
+
 
 
 const symbolRe = /^[a-z][a-zA-Z0-9_]*$/
@@ -100,7 +102,7 @@ const prettyPrintAtom = (astFacts, atomId) => {
     ([_name, id, _timestamp]) => _.isEqual(id, atomId));
 
   const keep = ([id, index, value]) => _.isEqual(id, atomId);
-  const argsStrs = collectArguments(astFacts, {
+  const argsStrs = collectListFromFacts(astFacts, {
     'ast_atom_sym_arg/3': {
       keep, getPair: ([id, index, value]) => [index, ppSymbol(value)]
     },
@@ -121,36 +123,11 @@ const prettyPrintAtom = (astFacts, atomId) => {
 
 
 
-const collectArguments = (astFacts, selectors) => {
-  // selectors = { [key]: { keep, getPair }, ... }
-
-  const pairs = Object.keys(selectors).flatMap(key => {
-    const { keep, getPair } = selectors[key];
-    return (astFacts.get(key) ?? []).filter(keep).map(getPair);
-  });
-
-  const sortedPairs = _.sortBy(pairs, ([index, _val]) => index);
-
-  if (sortedPairs.length === 0) {
-    return [];
-  }
-
-  const expectedIndexes = _.range(1, sortedPairs.length+1);
-  const [collectedIndexes, values] = _.unzip(sortedPairs);
-  if (!_.isEqual(expectedIndexes, collectedIndexes)) {
-    throw new Error(`Incorrect args indexes: ${JSON.stringify(collectedIndexes)}`);
-  }
-
-  return values;
-}
-
-
-
 const prettyPrintBodyExpr = (astFacts, exprId, isLastExpr) => {
   const indent = "  ";
 
   const keep = ([id, index, name]) => _.isEqual(id, exprId);
-  const argsStrs = collectArguments(astFacts, {
+  const argsStrs = collectListFromFacts(astFacts, {
     'ast_body_sym_arg/3': {
       keep, getPair: ([id, index, value]) => [index, ppSymbol(value)]
     },
@@ -166,12 +143,12 @@ const prettyPrintBodyExpr = (astFacts, exprId, isLastExpr) => {
     },
   });
 
-  const chooseKeyVars = collectArguments(astFacts, {
+  const chooseKeyVars = collectListFromFacts(astFacts, {
     'ast_body_choose_key_var/3': {
       keep, getPair: ([id, index, name]) => [index, ppVar({ name })]
     },
   });
-  const chooseRowVars = collectArguments(astFacts, {
+  const chooseRowVars = collectListFromFacts(astFacts, {
     'ast_body_choose_row_var/3': {
       keep, getPair: ([id, index, name]) => [index, ppVar({ name })]
     },
@@ -269,7 +246,7 @@ const prettyPrintClause = (astFacts, clauseId) => {
     ([_name, id, _suffix]) => _.isEqual(id, clauseId));
   
   const keep = ([id, _index, _value]) => _.isEqual(id, clauseId);
-  const argsStrs = collectArguments(astFacts, {
+  const argsStrs = collectListFromFacts(astFacts, {
     'ast_clause_sym_arg/3': {
       keep, getPair: ([id, index, value]) => [index, ppSymbol(value)]
     },

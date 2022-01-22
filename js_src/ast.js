@@ -435,11 +435,38 @@ const extractMetadata = (astTFacts0) => {
 
 
 
+const collectListFromFacts = (astFacts, selectors) => {
+  // selectors = { [key]: { keep, getPair }, ... }
+
+  const pairs = Object.keys(selectors).flatMap(key => {
+    const { keep, getPair } = selectors[key];
+    return (astFacts.get(key) ?? []).filter(keep).map(getPair);
+  });
+
+  const sortedPairs = _.sortBy(pairs, ([index, _val]) => index);
+
+  if (sortedPairs.length === 0) {
+    return [];
+  }
+
+  const expectedIndexes = _.range(1, sortedPairs.length+1);
+  const [collectedIndexes, values] = _.unzip(sortedPairs);
+  if (!_.isEqual(expectedIndexes, collectedIndexes)) {
+    throw new Error(`Incorrect args indexes: ${JSON.stringify(collectedIndexes)}`);
+  }
+
+  return values;
+}
+
+
+
+
 export {
   mergeTFactsDeep,
   mergeFactsDeep,
   tree2facts,
   sourceFactsFromAstFacts,
   rulesFromAstFacts,
-  extractMetadata
+  extractMetadata,
+  collectListFromFacts,
 }

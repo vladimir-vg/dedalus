@@ -1,23 +1,9 @@
 import _ from 'lodash';
 
-import { mergeFactsDeep } from '../ast.js';
+import { mergeFactsDeep, collectListFromFacts } from '../ast.js';
 import { Table } from './table.js';
 
 
-
-const collectValuesFromFacts = (ast, selectors) => {
-  // { key, filter, selectValue, selectIndex }
-  const result = [];
-  selectors.forEach(({ key, keep, selectValue, selectIndex }) => {
-    (ast.get(key) ?? []).forEach(row => {
-      if (!keep(row)) { return; }
-      // index is 1-based
-      const index = selectIndex(row);
-      result[index-1] = selectValue(row);
-    });
-  });
-  return result;
-};
 
 const collectBodyFacts = (ast, clauseId) => {
   const items = [];
@@ -36,19 +22,18 @@ const collectBodyFacts = (ast, clauseId) => {
     if (!bodyFact) { return; }
     const [_id, name, _n] = bodyFact;
 
-    const valueCollector = (key, isVar) => ({
-      key,
-      keep: (row) => _.isEqual(row[0], exprId),
-      selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
-      selectIndex: (row) => row[1],
+    const keep = (row) => _.isEqual(row[0], exprId);
+    const getPairSimpleValue = ([id, index, value]) => [index, value];
+    const params = collectListFromFacts(ast, {
+      'ast_body_var_arg/4': {
+        keep,
+        getPair: ([id, index, name, locPrefix]) => [index, name['symbol']]
+      },
+      'ast_body_int_arg/3': { keep, getPair: getPairSimpleValue },
+      'ast_body_str_arg/3': { keep, getPair: getPairSimpleValue },
+      'ast_body_sym_arg/3': { keep, getPair: getPairSimpleValue },
     });
 
-    const params = collectValuesFromFacts(ast, [
-      valueCollector('ast_body_var_arg/4', true),
-      valueCollector('ast_body_int_arg/3'),
-      valueCollector('ast_body_str_arg/3'),
-      valueCollector('ast_body_sym_arg/3'),
-    ]);
     const key = `${name['symbol']}/${params.length}`;
 
     items.push({ key, params });
@@ -65,19 +50,17 @@ const collectBodyConditions = (ast, clauseId) => {
       .some(tuple => _.isEqual(tuple, [clauseId, exprId]));
     if (!doesBelongToClause) { return; }
 
-    const valueCollector = (key, isVar) => ({
-      key,
-      keep: (row) => _.isEqual(row[0], exprId),
-      selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
-      selectIndex: (row) => row[1],
+    const keep = (row) => _.isEqual(row[0], exprId);
+    const getPairSimpleValue = ([id, index, value]) => [index, value];
+    const params = collectListFromFacts(ast, {
+      'ast_body_var_arg/4': {
+        keep,
+        getPair: ([id, index, name, locPrefix]) => [index, name['symbol']]
+      },
+      'ast_body_int_arg/3': { keep, getPair: getPairSimpleValue },
+      'ast_body_str_arg/3': { keep, getPair: getPairSimpleValue },
+      'ast_body_sym_arg/3': { keep, getPair: getPairSimpleValue },
     });
-
-    const params = collectValuesFromFacts(ast, [
-      valueCollector('ast_body_var_arg/4', true),
-      valueCollector('ast_body_int_arg/3'),
-      valueCollector('ast_body_str_arg/3'),
-      valueCollector('ast_body_sym_arg/3'),
-    ]);
 
     items.push([params[0], op['symbol'], params[1]]);
   });
@@ -92,19 +75,18 @@ const prepareDeductiveClauses = (ast) => {
     // we are interested only in deductive rules
     if (!_.isEqual(suffix, {symbol: 'none'})) { return; }
 
-    const valueCollector = (key, isVar) => ({
-      key,
-      keep: (row) => _.isEqual(row[0], clauseId),
-      selectValue: (row) => isVar ? row[2]['symbol'] : row[2],
-      selectIndex: (row) => row[1],
+    const keep = (row) => _.isEqual(row[0], clauseId);
+    const getPairSimpleValue = ([id, index, value]) => [index, value];
+    const params = collectListFromFacts(ast, {
+      'ast_clause_var_arg/5': {
+        keep,
+        getPair: ([id, index, name, aggFunc, locPrefix]) => [index, name['symbol']],
+      },
+      'ast_clause_int_arg/3': { keep, getPair: getPairSimpleValue },
+      'ast_clause_str_arg/3': { keep, getPair: getPairSimpleValue },
+      'ast_clause_sym_arg/3': { keep, getPair: getPairSimpleValue },
     });
 
-    const params = collectValuesFromFacts(ast, [
-      valueCollector('ast_clause_var_arg/5', true),
-      valueCollector('ast_clause_int_arg/3'),
-      valueCollector('ast_clause_str_arg/3'),
-      valueCollector('ast_clause_sym_arg/3'),
-    ]);
     const key = `${name['symbol']}/${params.length}`;
 
     const bodyFacts = collectBodyFacts(ast, clauseId);
