@@ -8,7 +8,7 @@ Great talk by Peter Alvaro, designer of the language: https://www.youtube.com/wa
 
 The easiest way would be to write naive implementation of Dedalus in some high-level language like JavaScript.
 
-After first correct implementation is acquired and test suite formed, we could think about speed. We could either use one of the existing Datalog engines (or [C4 implementation of Overlof](https://github.com/bloom-lang/c4/)) underneath or apply our own optimizations to initial implementation.
+After first correct implementation is acquired and test suite formed, we could think about speed. We could either use one of the existing Datalog engines (or [C4 implementation of Overlog](https://github.com/bloom-lang/c4/)) underneath or apply our own optimizations to initial implementation.
 
 Non-deterministic `choose` rule can be expressed in terms of negation and recursion in such a way, that the only thing left is to assert selected choices as facts. [Greedy algorithms in Datalog with choice and negation](https://dl.acm.org/doi/10.5555/299315.301505), pages 3-4.
 
@@ -29,9 +29,9 @@ Non-deterministic `choose` rule can be expressed in terms of negation and recurs
  0. [x] PEGJS parser that takes in source file and spits out collection of JS arrays that represent AST (with line numbers)
  1. [ ] Dedalus code that deducts whether given AST is correct Dedalus program. Should produce error facts with descriptions and line numbers.
  2. [ ] Dedalus code that would transform rules with choose rule to equivalent that rely on presence of asserted choice fact.
- 3. [ ] Pretty printer for Dedalus AST
- 4. [ ] Parser tests via input source code and output AST facts
- 5. [ ] Testing system
+ 3. [x] Pretty printer for Dedalus AST
+ 4. [x] Parser tests via input source code and output AST facts
+ 5. [x] Testing system
 
 # Related projects
 
