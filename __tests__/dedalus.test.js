@@ -1,11 +1,12 @@
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs/promises';
+import glob from 'glob-promise';
 
 import _ from 'lodash';
 
 import { validateFile, parseDedalus, runDeductively } from '../js_src/index.js';
-import {prettyPrintFacts, prettyPrintAST } from '../js_src/index.js';
+import { prettyPrintFacts, prettyPrintAST } from '../js_src/index.js';
 
 
 
@@ -14,53 +15,58 @@ const __dirname = path.dirname(__filename);
 
 
 
-const findTestcases = async ({ in_dir = '.', skip = [] }) => {
-  // user may specify testcases to skip that are
-  // not in folder anymore. Would be misleading
-  // to show them report, so check which were actually skipped
-  const actuallySkipped = [];
+const findTestcases = async ({ blacklist, only }) => {
+  const all = await glob('**/*.test.dedalus');
+  const skipped = [];
+  let testcases;
+  if (only.length !== 0) {
+    testcases = only;
+  } else {
+    testcases = all.filter(path => {
+      if (blacklist.includes(path)) {
+        skipped.push(path);
+        return false;
+      }
+      return true;
+    });
+  }
 
   const testcaseRe = /^([a-zA-Z0-9_]+)\.test\.dedalus$/;
-  const dirPath = path.join(__dirname, in_dir);
-  const filenames0 = await fs.readdir(dirPath);
-  const filenames1 = filenames0
-    .filter(filename => testcaseRe.test(filename))
-    .filter(filename => {
-      const mustBeSkipped = _.some(skip, filename1 =>
-        _.isEqual(filename, `${filename1}.test.dedalus`));
-        const notATest = !testcaseRe.test(filename);
-        if (mustBeSkipped) {
-          actuallySkipped.push(filename.match(testcaseRe)[1]);
-        }
-        return !(mustBeSkipped || notATest);
-      });
 
-  const testcases = filenames1.map(filename => filename.match(testcaseRe)[1]);
-  return {
-    toRun: testcases.map(t => [t]),
-    toSkip: actuallySkipped.map(t => [t])
-  };
+  // now we need to group all test cases by dirs
+  const result = {};
+  const testsDirs = _.uniq(all.map(path => path.split('/')[1]));
+  testsDirs.forEach(dir => {
+    result[dir] = {toRun: [], toSkip: []};
+  });
+
+  testcases.forEach(path => {
+    const [_t, dir, filename] = path.split('/');
+    result[dir].toRun.push(filename.match(testcaseRe)[1]);
+  });
+  skipped.forEach(path => {
+    const [_t, dir, filename] = path.split('/');
+    result[dir].toSkip.push(filename.match(testcaseRe)[1]);
+  });
+
+  return result;
 };
 
 
 
-const testcases = {};
-testcases.validator = await findTestcases({
-  in_dir: 'validator',
-  skip: [
-    'negated_not_in_positive',
+const testcases = await findTestcases({
+  blacklist: [
+    // temorarly turned off tests
+    '__tests__/validator/negated_not_in_positive.test.dedalus',
+    '__tests__/eval/successor.test.dedalus',
+    '__tests__/eval/negation.test.dedalus',
   ],
-});
-testcases.parser = await findTestcases({
-  in_dir: 'parser',
-  // skip: [
-  // ],
-});
-testcases.eval = await findTestcases({
-  in_dir: 'eval',
-  skip: [
-    'successor',
-    'negation',
+  only: [
+    // if we want to run only particular tests (e.g. for debugging)
+    // then we specify them here.
+    //
+    // if list is empty, then everything is run as usual
+    // '__tests__/eval/negation.test.dedalus',
   ],
 });
 
@@ -72,6 +78,7 @@ describe("validator", () => {
     test.skip.each(testcases.validator.toSkip)('%s', async (name) => null);
   }
 
+  if (testcases.validator.toRun.length == 0) { return; }
   test.each(testcases.validator.toRun)('%s', async (name) => {
     const inputPath = path.join(__dirname, `./validator/${name}.in.dedalus`);
     const matcherPath = path.join(__dirname, `./validator/${name}.test.dedalus`);
@@ -94,6 +101,7 @@ describe('parser', () => {
   if (testcases.parser.toSkip.length != 0) {
     test.skip.each(testcases.parser.toSkip)('%s', async (name) => null);
   }
+  if (testcases.parser.toRun.length == 0) { return; }
   test.each(testcases.parser.toRun)('%s', async (name) => {
     const inputPath = path.join(__dirname, `./parser/${name}.in.dedalus`);
     const matcherPath = path.join(__dirname, `./parser/${name}.test.dedalus`);
@@ -116,6 +124,7 @@ describe('eval', () => {
   if (testcases.eval.toSkip.length != 0) {
     test.skip.each(testcases.eval.toSkip)('%s', async (name) => null);
   }
+  if (testcases.eval.toRun.length == 0) { return; }
   test.each(testcases.eval.toRun)('%s', async (name) => {
     const matcherPath = path.join(__dirname, `./eval/${name}.test.dedalus`);
     const matcherText = await fs.readFile(matcherPath);

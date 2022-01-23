@@ -7,7 +7,7 @@
 
 fact1(1)@0;
 fact1(100)@0;
-fact1(-10);
+fact1(-10)@0;
 
 rule1(A, C) :-
   successor(A, B),

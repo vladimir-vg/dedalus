@@ -146,6 +146,12 @@ stratum_option(Parent, Stratum) :-
   dependency(Parent, Child, NeedStratumChange),
   NeedStratumChange = true,
   stratum_option(Child, Stratum1),
+  % TODO: turns out it is not correct to use successor this way
+  % it cannot produce new values, only confirm that existing
+  % values follow each other.
+  %
+  % Need to rewrite this code to produce
+  % new stratum on each @next tick
   successor(Stratum1, Stratum);
 stratum_option(Parent, Stratum) :-
   % if have positive child, then just propagate its choosen stratum.
