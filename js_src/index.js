@@ -68,11 +68,24 @@ const computeStrata = async (sourceAst) => {
 
 
 
-const runDeductively = async (inputFacts, dedalusText, path) => {
+const runDeductively = async (inputFacts, dedalusText, path, opts = {}) => {
+  const { skipValidation } = opts;
   const astFactsT0 = await parseDedalus(dedalusText, path);
   const { explicitStrata, astTFacts } = extractMetadata(astFactsT0);
 
   // TODO: validate ast
+  if (!skipValidation) {
+    const tFacts = await validateFile(dedalusText, path);
+    // FIXME: dirty hack for now, just pick first timestamp
+    // it always gonna be AST_TIMESTAMP.
+    // TODO: In future, get rid of timestamps here
+    // they are not necessary.
+    const facts = tFacts.get(Array.from(tFacts.keys())[0]);
+    if ((facts.get('invalid_ast/0') ?? []).length != 0) {
+      console.log(prettyPrintFacts(tFacts));
+      throw new Error('Received invalid ast for execution');
+    }
+  }
 
   // better to explicitly separate facts from rules
   // give interpreter only rules, provide facts from outside
@@ -110,7 +123,7 @@ const validateFile = async (sourceDedalusText, path) => {
   const sourceAst = await parseDedalus(sourceDedalusText, path);
   const validatorDedalusText = await fs.readFile(validatorPath);
 
-  return await runDeductively(sourceAst, validatorDedalusText, validatorPath);
+  return await runDeductively(sourceAst, validatorDedalusText, validatorPath, { skipValidation: true });
 };
 
 

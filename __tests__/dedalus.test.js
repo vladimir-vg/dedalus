@@ -90,7 +90,7 @@ describe("validator", () => {
     // we need to supply them as facts and run the matcher code
   
     const matcherText = await fs.readFile(matcherPath);
-    await runDedalusTest(validationFacts, matcherText, { inputHasAST: true });
+    await runDedalusTest(validationFacts, matcherText, `./validator/${name}.test.dedalus`, { inputHasAST: true });
   });
 });
 
@@ -113,7 +113,7 @@ describe('parser', () => {
     // we need to supply them as facts and run the matcher code
   
     const matcherText = await fs.readFile(matcherPath);
-    await runDedalusTest(astFacts, matcherText, { inputHasAST: true });
+    await runDedalusTest(astFacts, matcherText, `./parser/${name}.test.dedalus`, { inputHasAST: true });
   });
 });
 
@@ -130,16 +130,16 @@ describe('eval', () => {
     const matcherText = await fs.readFile(matcherPath);
 
     const inputFacts = (new Map([]));
-    await runDedalusTest(inputFacts, matcherText);
+    await runDedalusTest(inputFacts, matcherText, `./eval/${name}.test.dedalus`);
   });
 });
 
 
 
-const runDedalusTest = async (inputFacts, matcherText, opts = {}) => {
+const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) => {
   const { inputHasAST } = opts;
 
-  const matchingTFacts = await runDeductively(inputFacts, matcherText, '*matcher*');
+  const matchingTFacts = await runDeductively(inputFacts, matcherText, matcherPath);
   const lastTimestamp = [...matchingTFacts.keys()].reduce((t1, t2) => Math.max(t1,t2));
   const matchingFacts = matchingTFacts.get(lastTimestamp);
 

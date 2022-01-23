@@ -206,9 +206,9 @@
 %   ast_body_atom_var_time(ClauseN, RuleN2, VarName2),
 %   VarName1 =/= VarName2;
 
-has_errors :-
+invalid_ast :-
   err_negation_in_dep_cycle(_Filename, _Line, _Name);
-has_errors :-
+invalid_ast :-
   err_time_suffix_not_in_async_rule(_Filename, _Line, _Name);
 
 
