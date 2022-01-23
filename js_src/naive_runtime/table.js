@@ -6,29 +6,37 @@ const projectFactsToRows = (tuples, params) => {
   // vars might be repeated, also might be ignored
   // only unique non-ignored vars are kept as columns
 
-  const columns = _.uniq(params.filter(v =>
-    (typeof v == 'string') && (v[0] !== '_')));
+  const columns = _.uniq(
+    params
+      .filter(param => param.variable && (param.variable[0] !== '_'))
+      .map(param => param.variable));
   const rows1 = [];
 
   // if param is string, then assume it to be a variable name
   // anything else is value that we need to compare against row fields
   const comparisonIndexes = params
     .map((e, index) => index)
-    .filter(index => typeof params[index] !== 'string');
+    .filter(index => !params[index].variable);
 // if (columns.length == 0) debugger
   tuples.forEach(tuple => {
+    const matchesConstValues = _.every(
+      comparisonIndexes,
+      index => _.isEqual(tuple[index], params[index]));
 
-    const matchesConstValues = _.every(comparisonIndexes, index =>
-      _.isEqual(tuple[index], params[index]));
     if (!matchesConstValues) { return; }
 
     const pairs =  _.uniqWith(_.zip(params, tuple), _.isEqual);
     const row = columns.map(varname => {
-      const pairs1 = pairs.filter(([varname1, _value]) => varname1 == varname);
-      // if we have exactly one value, then we are good
+      const pairs1 = pairs.filter(([param, _value]) => param.variable == varname);
+      // if we have exactly one value, then there is no conflict
+      // in value assignment to columns
       if (pairs1.length == 1) {
         return pairs1[0][1];
       }
+
+      // bad row, doesn't match
+      // should move to next row immediately,
+      // but for simplicity just return
       return null;
     });
 
@@ -114,13 +122,13 @@ const extractPairFromCondition = (cond) => {
     return null;
   }
 
-  const isVarA = typeof a === 'string';
-  const isVarB = typeof b === 'string';
+  const isVarA = !!a.variable;
+  const isVarB = !!b.variable;
   if (isVarA && !isVarB) {
-    return [a, b];
+    return [a.variable, b];
   }
   if (!isVarA && isVarB) {
-    return [b, a];
+    return [b.variable, a];
   }
   return null;
 };
@@ -168,12 +176,12 @@ const newColumnsFromConditions = (columns, conditions0) => {
 
 const constructRowPredicate = (columns, cond) => {
   const [a, op, b] = cond;
-  const isVarA = typeof a === 'string';
-  const isVarB = typeof b === 'string';
+  const isVarA = !!a.variable;
+  const isVarB = !!b.variable;
 
   return (row) => {
-    const aValue = isVarA ? row[columns.indexOf(a)] : a;
-    const bValue = isVarB ? row[columns.indexOf(b)] : b;
+    const aValue = isVarA ? row[columns.indexOf(a.variable)] : a;
+    const bValue = isVarB ? row[columns.indexOf(b.variable)] : b;
 
     switch (op) {
       case '=': return _.isEqual(aValue, bValue);
@@ -186,6 +194,64 @@ const constructRowPredicate = (columns, cond) => {
 const constructPredicate = (columns, conditions) => {
   const predicates = conditions.map(cond => constructRowPredicate(columns, cond));
   return (row) => _.every(predicates, p => p(row));
+};
+
+
+
+const aggregateValues = (key, values) => {
+  switch (key) {
+    case 'max': return Math.max.apply(null, values);
+    case 'min': return Math.min.apply(null, values);
+    case 'sum': return _.sum(values);
+    default:
+      throw new Error(`Unknown aggregation function ${key}`);
+  }
+};
+
+
+
+const aggregateRows = (table, params) => {
+  // pick columns that are not aggregated
+  // group by them
+  // for each group, compute aggregated value
+
+  const aggregatedColumns = params
+    .filter(param => param.variable && param.aggFunc != 'none')
+    .map(param => param.variable);
+  const keyColumns = params
+    .filter(param => param.variable && !aggregatedColumns.includes(param.variable))
+    .map(param => param.variable);
+  
+  const groups = {};
+  table.rows.forEach(row => {
+    const groupValues = projectRowValues(row, table.columns, keyColumns);
+    // I know, this is terrible. JSON is the quickest way to identify groups by value
+    const key = JSON.stringify(groupValues);
+    groups[key] ??= [];
+    groups[key].push(row);
+    // debugger
+  });
+// debugger
+  const rows = Object.entries(groups)
+    .map(([_groupKey, rows]) => {
+      return params.map(param => {
+        if (param.variable && param.aggFunc !== 'none') {
+          const values = rows.map(row => row[table.columns.indexOf(param.variable)]);
+          return aggregateValues(param.aggFunc, values);
+        }
+        if (param.variable) {
+          // since rows are grouped
+          // and we work with non-aggregated variable
+          // then any element in rows would have
+          // same value by for this index
+          // so just pick first one
+          return rows[0][table.columns.indexOf(param.variable)];
+        }
+        return param; // return constant value as is
+      });
+    });
+  // debugger;
+  return rows;
 };
 
 
@@ -227,24 +293,15 @@ class Table {
     return this.naturalJoin(table2);
   }
 
-  projectColumns(columns) {
-    const hasUnknownColumn = _.some(columns, col =>
-      (typeof col == 'string') && !this.columns.includes(col));
+  projectColumns(params) {
+    const hasUnknownColumn = _.some(params, col =>
+      col.variable && !this.columns.includes(col.variable));
     if (hasUnknownColumn) {
       // we are requested project a column name that is not present
-      throw new Error(`Unexpected columns to project ${JSON.stringify(columns)} from ${JSON.stringify(this.columns)}`);
+      throw new Error(`Unexpected columns to project ${JSON.stringify(params)} from ${JSON.stringify(this.columns)}`);
     }
 
-    const rows1 = this.rows.map(row => {
-      return columns.map(col => {
-        if (typeof col === 'string') {
-          return row[this.columns.indexOf(col)];
-        }
-        return col; // return constant value as is
-      });
-    });
-    const rows = _.uniqWith(rows1, _.isEqual);
-    return rows;
+    return aggregateRows(this, params);
   }
 
   select(conditions0) {

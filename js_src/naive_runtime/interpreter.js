@@ -27,7 +27,8 @@ const collectBodyFacts = (ast, clauseId) => {
     const params = collectListFromFacts(ast, {
       'ast_body_var_arg/4': {
         keep,
-        getPair: ([id, index, name, locPrefix]) => [index, name['symbol']]
+        getPair: ([id, index, name, locPrefix]) =>
+          [index, { variable: name['symbol'] }]
       },
       'ast_body_int_arg/3': { keep, getPair: getPairSimpleValue },
       'ast_body_str_arg/3': { keep, getPair: getPairSimpleValue },
@@ -56,7 +57,8 @@ const collectBodyConditions = (ast, clauseId) => {
     const params = collectListFromFacts(ast, {
       'ast_body_var_arg/4': {
         keep,
-        getPair: ([id, index, name, locPrefix]) => [index, name['symbol']]
+        getPair: ([id, index, name, locPrefix]) =>
+          [index, { variable: name['symbol'] }]
       },
       'ast_body_int_arg/3': { keep, getPair: getPairSimpleValue },
       'ast_body_str_arg/3': { keep, getPair: getPairSimpleValue },
@@ -81,7 +83,8 @@ const prepareDeductiveClauses = (ast) => {
     const params = collectListFromFacts(ast, {
       'ast_clause_var_arg/5': {
         keep,
-        getPair: ([id, index, name, aggFunc, locPrefix]) => [index, name['symbol']],
+        getPair: ([id, index, name, aggFunc, locPrefix]) =>
+          [index, { variable: name['symbol'], aggFunc: aggFunc['symbol'] }],
       },
       'ast_clause_int_arg/3': { keep, getPair: getPairSimpleValue },
       'ast_clause_str_arg/3': { keep, getPair: getPairSimpleValue },

@@ -66,7 +66,7 @@ const testcases = await findTestcases({
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    // '__tests__/eval/negation.test.dedalus',
+    // '__tests__/eval/explicitly_stratified_aggregation.test.dedalus',
   ],
 });
 

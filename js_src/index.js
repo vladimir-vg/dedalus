@@ -19,7 +19,7 @@ const __dirname = path.dirname(__filename);
 
 const grammarPath = path.join(__dirname, 'grammar.pegjs');
 const validatorPath = path.join(__dirname, '..', 'd_src', 'validator.dedalus');
-const stratifierPath = path.join(__dirname, '..', 'd_src', 'stratifier.dedalus');
+// const stratifierPath = path.join(__dirname, '..', 'd_src', 'stratifier.dedalus');
 
 
 
@@ -83,9 +83,11 @@ const runDeductively = async (inputFacts, dedalusText, path) => {
   const tFactsFromSource = sourceFactsFromAstFacts(astTFacts);
   // We need to insert these facts as input, when the timestamp is right
   const facts = mergeTFactsDeep(inputFacts, tFactsFromSource);
-  const DEFAULT_INITIAL_TIMESTAMP = 1;
-  const initialTimestamp = [...facts.keys()].reduce((t1, t2) =>
-    Math.min(t1,t2), DEFAULT_INITIAL_TIMESTAMP);
+
+  let initialTimestamp = 1; // default initial timestamp
+  if (facts.size !== 0) {
+    initialTimestamp = [...facts.keys()].reduce((t1, t2) => Math.min(t1,t2));
+  }
 
   // if we don't have explicit strata, we need to compute it
   let strata = explicitStrata ?? await computeStrata(rules);
@@ -95,7 +97,7 @@ const runDeductively = async (inputFacts, dedalusText, path) => {
     rules, strata,
     initialTimestamp: initialTimestamp-1,
   });
-
+// debugger
   runtime.insertFactsForNextTick(initialFacts);
   const newFacts = runtime.deductFacts();
 

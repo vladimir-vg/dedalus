@@ -16,6 +16,7 @@
 
 
 person(alice,  1,   -105,  3  )@10;
+person(abert,  1,    15,  3  )@10;
 person(bob,    100,  25,   5  )@10;
 person(chris, -1,    30,   13 )@10;
 person(ivan,   100, -100,  1  )@10;
@@ -42,7 +43,7 @@ test_passed :-
   top_by_first(bob),
   top_by_first(ivan),
   sum_group_by_first(100, -75),
-  sum_group_by_first(1, 2);
+  sum_group_by_first(1, -90);
 
 test_failed_max_first(A) :-
   max_by_first(A),
