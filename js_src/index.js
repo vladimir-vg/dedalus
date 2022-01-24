@@ -73,7 +73,6 @@ const runDeductively = async (inputFacts, dedalusText, path, opts = {}) => {
   const astFactsT0 = await parseDedalus(dedalusText, path);
   const { explicitStrata, astTFacts } = extractMetadata(astFactsT0);
 
-  // TODO: validate ast
   if (!skipValidation) {
     const tFacts = await validateFile(dedalusText, path);
     // FIXME: dirty hack for now, just pick first timestamp

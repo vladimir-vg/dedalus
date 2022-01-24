@@ -64,7 +64,7 @@ const testcases = await findTestcases({
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    // '__tests__/eval/explicitly_stratified_aggregation.test.dedalus',
+    // '__tests__/validator/incorrect_use_of_successor.test.dedalus',
   ],
 });
 

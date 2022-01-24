@@ -5,6 +5,24 @@ import { Table } from './table.js';
 
 
 
+const collectExprArgs = (astFacts, exprId) => {
+  const keep = (row) => _.isEqual(row[0], exprId);
+  const getPairSimpleValue = ([id, index, value]) => [index, value];
+  const params = collectListFromFacts(astFacts, {
+    'ast_body_var_arg/4': {
+      keep,
+      getPair: ([id, index, name, locPrefix]) =>
+        [index, { variable: name['symbol'] }]
+    },
+    'ast_body_int_arg/3': { keep, getPair: getPairSimpleValue },
+    'ast_body_str_arg/3': { keep, getPair: getPairSimpleValue },
+    'ast_body_sym_arg/3': { keep, getPair: getPairSimpleValue },
+  });
+  return params;
+}
+
+
+
 const collectBodyFacts = (ast, clauseId) => {
   const items = [];
 
@@ -21,20 +39,9 @@ const collectBodyFacts = (ast, clauseId) => {
     
     if (!bodyFact) { return; }
     const [_id, name, negated] = bodyFact;
+    if (name['symbol'] == 'successor') { return; }
 
-    const keep = (row) => _.isEqual(row[0], exprId);
-    const getPairSimpleValue = ([id, index, value]) => [index, value];
-    const params = collectListFromFacts(ast, {
-      'ast_body_var_arg/4': {
-        keep,
-        getPair: ([id, index, name, locPrefix]) =>
-          [index, { variable: name['symbol'] }]
-      },
-      'ast_body_int_arg/3': { keep, getPair: getPairSimpleValue },
-      'ast_body_str_arg/3': { keep, getPair: getPairSimpleValue },
-      'ast_body_sym_arg/3': { keep, getPair: getPairSimpleValue },
-    });
-
+    const params = collectExprArgs(ast, exprId);
     const key = `${name['symbol']}/${params.length}`;
 
     const isNegated = (negated['symbol'] == 'true');
@@ -52,20 +59,24 @@ const collectBodyConditions = (ast, clauseId) => {
       .some(tuple => _.isEqual(tuple, [clauseId, exprId]));
     if (!doesBelongToClause) { return; }
 
-    const keep = (row) => _.isEqual(row[0], exprId);
-    const getPairSimpleValue = ([id, index, value]) => [index, value];
-    const params = collectListFromFacts(ast, {
-      'ast_body_var_arg/4': {
-        keep,
-        getPair: ([id, index, name, locPrefix]) =>
-          [index, { variable: name['symbol'] }]
-      },
-      'ast_body_int_arg/3': { keep, getPair: getPairSimpleValue },
-      'ast_body_str_arg/3': { keep, getPair: getPairSimpleValue },
-      'ast_body_sym_arg/3': { keep, getPair: getPairSimpleValue },
-    });
-
+    const params = collectExprArgs(ast, exprId);
     items.push([params[0], op['symbol'], params[1]]);
+  });
+
+  // successor atom acts as condition
+  (ast.get('ast_body_atom/3') ?? []).forEach(tuple => {
+    const [exprId, name, negated] = tuple;
+    if (name['symbol'] !== 'successor') { return; }
+    const doesBelongToClause = ast.get('ast_body_expr/2')
+      .some(tuple => _.isEqual(tuple, [clauseId, exprId]));
+    if (!doesBelongToClause) { return; }
+
+    const isNegated = (negated['symbol'] == 'true');
+    const params = collectExprArgs(ast, exprId);
+    // number of args must be checked by validator
+    const op = isNegated ? 'succ-neg' : 'succ';
+    if (!params[1]) debugger
+    items.push([params[0], op, params[1]]);
   });
 
   return items;
@@ -169,7 +180,7 @@ const getRulesForStratum = (astRules, strata, stratum) => {
       default: return [key, tuples];
     }
   })));
-// debugger
+
   return filteredAstRules;
 };
 

@@ -34,6 +34,11 @@
 % negated atoms and their deps also must be in first stratum:
 '$meta stratum'(first, var_used_in_expr)@0;
 '$meta stratum'(first, var_present_in_positive)@0;
+% deps of aggregated atoms must be in first stratum:
+'$meta stratum'(first, atom_arg)@0;
+'$meta stratum'(first, clause_arg)@0;
+'$meta stratum'(first, body_atom_arg)@0;
+
 
 '$meta stratum'(second, invalid_ast)@0;
 '$meta stratum'(second, err_negation_in_dep_cycle)@0;
@@ -45,6 +50,10 @@
 '$meta stratum'(second, predicate_dependency)@0;
 '$meta stratum'(second, reachable)@0;
 '$meta stratum'(second, body_atom_has_time_suffix)@0;
+'$meta stratum'(second, err_inconsistent_number_of_fields)@0;
+'$meta stratum'(second, arity)@0;
+'$meta stratum'(second, err_location_prefix_in_successor)@0;
+'$meta stratum'(second, err_successor_wrong_arg_num)@0;
 
 '$meta stratum_dependency'(second, first)@0;
 
@@ -258,6 +267,7 @@ invalid_ast :- err_time_suffix_not_in_async_rule(_,_,_);
 invalid_ast :- err_range_unrestricted_variable(_,_,_);
 invalid_ast :- err_negated_not_in_positive(_,_,_);
 invalid_ast :- err_wrong_rule_name(_,_,_);
+invalid_ast :- err_inconsistent_number_of_fields(_);
 
 
 
@@ -356,6 +366,55 @@ err_wrong_rule_name(Filename, Line, Name) :-
   ast_clause_location(Filename, Line, ClauseId),
   ast_clause(Name, ClauseId, _Suffix),
   Name = choose;
+
+%%%
+%%%
+%%%
+
+err_inconsistent_number_of_fields(Name) :-
+  arity(Name, _, N1),
+  arity(Name, _, N2),
+  N1 =/= N2;
+
+arity(Name, AtomId, count<ArgN>) :-
+  ast_atom(Name, AtomId, _Timestamp),
+  atom_arg(AtomId, ArgN);
+arity(Name, ClauseId, count<ArgN>) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  clause_arg(ClauseId, ArgN);
+arity(Name, ExprId, count<ArgN>) :-
+  ast_body_atom(ExprId, Name, _Negated),
+  body_atom_arg(ExprId, ArgN);
+
+atom_arg(AtomId, ArgN) :- ast_atom_int_arg(AtomId, ArgN, _);
+atom_arg(AtomId, ArgN) :- ast_atom_sym_arg(AtomId, ArgN, _);
+atom_arg(AtomId, ArgN) :- ast_atom_str_arg(AtomId, ArgN, _);
+
+clause_arg(ClauseId, ArgN) :- ast_clause_int_arg(ClauseId, ArgN, _);
+clause_arg(ClauseId, ArgN) :- ast_clause_str_arg(ClauseId, ArgN, _);
+clause_arg(ClauseId, ArgN) :- ast_clause_sym_arg(ClauseId, ArgN, _);
+clause_arg(ClauseId, ArgN) :- ast_clause_var_arg(ClauseId, ArgN, _, _, _);
+
+body_atom_arg(ExprId, ArgN) :- ast_body_var_arg(ExprId, ArgN, _, _);
+body_atom_arg(ExprId, ArgN) :- ast_body_int_arg(ExprId, ArgN, _);
+body_atom_arg(ExprId, ArgN) :- ast_body_sym_arg(ExprId, ArgN, _);
+body_atom_arg(ExprId, ArgN) :- ast_body_str_arg(ExprId, ArgN, _);
+
+%%%
+%%%
+%%%
+
+err_location_prefix_in_successor(Filename, Line, VarName) :-
+  ast_body_expr_location(Filename, Line, ExprId),
+  ast_body_atom(ExprId, successor, _Negated),
+  ast_body_var_arg(ExprId, _, VarName, LocPrefix),
+  LocPrefix = true;
+
+err_successor_wrong_arg_num(Filename, Line, N) :-
+  ast_body_expr_location(Filename, Line, ExprId),
+  ast_body_atom(ExprId, successor, _Negated),
+  arity(successor, ExprId, N),
+  N =/= 2;
 
 % we need to transform rules with choose rules
 % need to generate new ids for helper rules

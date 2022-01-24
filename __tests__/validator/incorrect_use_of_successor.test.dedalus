@@ -1,0 +1,4 @@
+test_passed :-
+  err_location_prefix_in_successor(_, 7, 'B'),
+  err_successor_wrong_arg_num(_, 12, 1),
+  err_successor_wrong_arg_num(_, 13, 3);

@@ -1,0 +1,18 @@
+
+fact1(1, 2, 3)@1;
+fact1(1, 2)@1;
+
+fact2(one)@1;
+fact2(two)@1;
+
+fact3(two)@1;
+fact3(three)@1;
+
+rule1(A, B, C) :-
+  fact3(A),
+  fact3(B, C);
+
+rule1(A, B) :-
+  fact2(A),
+  fact2(B);
+

@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import hash from 'object-hash';
 
 
 
@@ -183,9 +184,14 @@ const constructRowPredicate = (columns, cond) => {
     const aValue = isVarA ? row[columns.indexOf(a.variable)] : a;
     const bValue = isVarB ? row[columns.indexOf(b.variable)] : b;
 
+    const isNumberA = (typeof aValue == 'number');
+    const isNumberB = (typeof bValue == 'number');
+
     switch (op) {
       case '=': return _.isEqual(aValue, bValue);
       case '=/=': return !_.isEqual(aValue, bValue);
+      case 'succ': return isNumberA && isNumberB && (aValue+1 == bValue);
+      case 'succ-neg': return isNumberA && isNumberB && (aValue+1 != bValue);
       default: throw new Error(`Unknown operator: ${op}`);
     }
   };
@@ -203,6 +209,7 @@ const aggregateValues = (key, values) => {
     case 'max': return Math.max.apply(null, values);
     case 'min': return Math.min.apply(null, values);
     case 'sum': return _.sum(values);
+    case 'count': { debugger; return values.length};
     default:
       throw new Error(`Unknown aggregation function ${key}`);
   }
@@ -225,18 +232,17 @@ const aggregateRows = (table, params) => {
   const groups = {};
   table.rows.forEach(row => {
     const groupValues = projectRowValues(row, table.columns, keyColumns);
-    // I know, this is terrible. JSON is the quickest way to identify groups by value
-    const key = JSON.stringify(groupValues);
+    const key = hash(groupValues);
     groups[key] ??= [];
     groups[key].push(row);
-    // debugger
   });
-// debugger
+
   const rows = Object.entries(groups)
     .map(([_groupKey, rows]) => {
       return params.map(param => {
         if (param.variable && param.aggFunc !== 'none') {
-          const values = rows.map(row => row[table.columns.indexOf(param.variable)]);
+          const values0 = rows.map(row => row[table.columns.indexOf(param.variable)]);
+          const values = _.uniqWith(values0, _.isEqual);
           return aggregateValues(param.aggFunc, values);
         }
         if (param.variable) {
@@ -250,7 +256,6 @@ const aggregateRows = (table, params) => {
         return param; // return constant value as is
       });
     });
-  // debugger;
   return rows;
 };
 

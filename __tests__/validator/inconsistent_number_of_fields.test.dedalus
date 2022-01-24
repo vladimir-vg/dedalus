@@ -1,0 +1,7 @@
+test_passed :-
+  err_inconsistent_number_of_fields(fact1),
+  err_inconsistent_number_of_fields(rule1),
+  err_inconsistent_number_of_fields(fact3);
+
+test_failed :-
+  err_inconsistent_number_of_fields(fact2);

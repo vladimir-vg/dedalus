@@ -23,6 +23,7 @@
   "dependencies": {
     "commander": "^8.3.0",
     "lodash": "^4.17.21",
+    "object-hash": "^2.2.0",
     "peggy": "^1.2.0",
     "seedrandom": "^3.0.5"
   },

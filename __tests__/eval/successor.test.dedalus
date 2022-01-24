@@ -17,12 +17,21 @@ adjacent_by_second(Name1, Name2) :-
   fact(Name2, _, B2),
   successor(B1, B2);
 
+not_adjacent_by_first(Name1, Name2) :-
+  not_adjacent_by_first(Name2, Name1);
+not_adjacent_by_first(Name1, Name2) :-
+  fact(Name1, A1, _),
+  fact(Name2, A2, _),
+  notin successor(A1, A2);
+
 
 
 test_passed :-
   adjacent_by_first(alice, bob),
   adjacent_by_first(bob, ivan),
-  adjacent_by_second(bob, chris);
+  adjacent_by_second(bob, chris),
+  not_adjacent_by_first(alice, ivan),
+  not_adjacent_by_first(chris, bob);
 
 test_failed :-
   adjacent_by_first(alice, ivan);

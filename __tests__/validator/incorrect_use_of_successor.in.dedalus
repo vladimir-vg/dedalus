@@ -1,0 +1,14 @@
+
+fact1(1, 2)@1;
+fact1(3, 4)@1;
+
+rule1(A)@async :-
+  fact1(A, #B),
+  successor(A, #B);
+
+rule2(B) :-
+  fact1(A, B),
+  fact1(B, C),
+  successor(A),
+  successor(A, B, C);
+
