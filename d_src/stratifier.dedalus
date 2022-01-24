@@ -10,24 +10,25 @@
 '$meta stratum'(a, ast_atom)@0;
 '$meta stratum'(a, ast_clause_var_arg)@0;
 '$meta stratum'(a, ast_body_var_arg)@0;
-'$meta stratum'(a, symbol)@0;
-'$meta stratum'(a, initial_fact)@0;
-'$meta stratum'(a, negated_dependency)@0;
-'$meta stratum'(a, aggregated_dependency)@0;
-'$meta stratum'(a, body_atom_uses_var)@0;
-'$meta stratum'(a, aggregated_clause_var)@0;
 
-'$meta stratum'(b, path)@0;
-'$meta stratum'(b, cycle)@0;
-'$meta stratum'(b, vertex)@0;
-'$meta stratum'(b, dependency)@0;
+% '$meta stratum'(a, symbol)@0;
+% '$meta stratum'(a, initial_fact)@0;
+% '$meta stratum'(a, negated_dependency)@0;
+% '$meta stratum'(a, aggregated_dependency)@0;
+% '$meta stratum'(a, body_atom_uses_var)@0;
+% '$meta stratum'(a, aggregated_clause_var)@0;
 
-'$meta stratum'(c, leaf)@0;
-'$meta stratum'(c, stratum_option)@0;
+% '$meta stratum'(b, path)@0;
+% '$meta stratum'(b, cycle)@0;
+% '$meta stratum'(b, vertex)@0;
+% '$meta stratum'(b, dependency)@0;
 
-'$meta stratum'(d, stratum_number)@0;
-'$meta stratum'(d, stratum)@0;
-'$meta stratum'(d, stratum_dependency)@0;
+% '$meta stratum'(c, leaf)@0;
+% '$meta stratum'(c, stratum_option)@0;
+
+% '$meta stratum'(d, stratum_number)@0;
+% '$meta stratum'(d, stratum)@0;
+% '$meta stratum'(d, stratum_dependency)@0;
 
 % $meta stratum_dependency forms a DAG, no cycles allowed.
 % Each stratum contains set of rules, which are vertices in rule dependency graph.
@@ -39,10 +40,11 @@
 %
 % Better to keep things unordered as long as it is possible,
 % to keep opportunities for optimization open.
-'$meta stratum_dependency'(b, a)@0;
-'$meta stratum_dependency'(c, b)@0;
-'$meta stratum_dependency'(d, c)@0;
-'$meta stratum_dependency'(d, a)@0;
+
+% '$meta stratum_dependency'(b, a)@0;
+% '$meta stratum_dependency'(c, b)@0;
+% '$meta stratum_dependency'(d, c)@0;
+% '$meta stratum_dependency'(d, a)@0;
 
 
 
@@ -60,8 +62,7 @@
 
 
 
-initial_fact(Name) :-
-  ast_atom(Name, _AtomId, _Timestamp);
+initial_fact(Name) :- ast_atom(Name, _AtomId, _Timestamp);
 
 negated_dependency(Name1, Name2) :-
   ast_clause(Name1, ClauseId, Suffix),
@@ -111,13 +112,14 @@ path(Name1, Name2) :-
   dependency(Name1, Name0, _NeedStratumChange),
   path(Name0, Name2);
 
-cycle(Name) :-
-  path(Name, Name);
+cycle(Name) :- path(Name, Name);
 
-vertex(A) :-
-  dependency(A, _B, _NeedStratumChange);
-vertex(B) :-
-  dependency(_A, B, _NeedStratumChange);
+same_cycle(Name1, Name2) :-
+  path(Name1, Name2),
+  path(Name2, Name1);
+
+vertex(A) :- dependency(A, _B, _NeedStratumChange);
+vertex(B) :- dependency(_A, B, _NeedStratumChange);
 
 leaf(A) :-
   vertex(A),
@@ -125,62 +127,97 @@ leaf(A) :-
   notin dependency(A, B, true),
   notin dependency(A, B, false);
 
-% stratum_option computes one of the possible stratum numbers
-% that given vertex may have. In the end only max stratum would be selected.
 
-stratum_option(V, Stratum) :-
-  leaf(V),
-  Stratum = 1;
-stratum_option(V, Stratum) :-
-  % this stratum option likely would be overshadowed
-  % by other rules. We need this for the case
-  % if we have network of self-referencing cycles
-  % that have no edges with leaf vertices at all.
-  % In that case at least one initial_fact rule
-  % inside this subgraph would spread stratum across.
-  initial_fact(V),
-  Stratum = 1;
-stratum_option(Parent, Stratum) :-
-  % if we have negative child with stratum,
-  % then parent stratum must be at least +1
-  dependency(Parent, Child, NeedStratumChange),
-  NeedStratumChange = true,
-  stratum_option(Child, Stratum1),
-  % TODO: turns out it is not correct to use successor this way
-  % it cannot produce new values, only confirm that existing
-  % values follow each other.
-  %
-  % Need to rewrite this code to produce
-  % new stratum on each @next tick
-  successor(Stratum1, Stratum);
-stratum_option(Parent, Stratum) :-
-  % if have positive child, then just propagate its choosen stratum.
-  % if parent has negative children, then this propagated value
-  % will be disregared in favor of larger one.
-  dependency(Parent, Child, NeedStratumChange),
-  NeedStratumChange = false,
-  stratum_option(Child, Stratum);
+
+% how to pick stratum:
+% 1) select leaf rules
+% 2) select rules that depend on selected rules and rules that already have a stratum
+% 3) select rules that belongs to cycle and depends on rules that are selected, already have stratum or belongs to cycle
+
+% keep already constructed strata
+stratum(Name, Stratum)@next :- stratum(Name, Stratum);
+stratum(Name, Stratum)@next :-
+  selected(Name),
+  next_available_symbol(Stratum);
 
 
 
-stratum_number(Name, max<Stratum>) :-
-  stratum_option(Name, Stratum);
-
-stratum(Name, StratumSym) :-
-  stratum_number(Name, Stratum),
-  symbol(Stratum, StratumSym);
-
-stratum_dependency(ParentStratum, ChildStratum) :-
-  dependency(Parent, Child, _NeedStratumChange),
+stratum_dependency(ParentStratum, ChildStratum)@next :- stratum_dependency(ParentStratum, ChildStratum);
+stratum_dependency(ParentStratum, ChildStratum)@next :-
   stratum(Parent, ParentStratum),
-  stratum(Child, ChildStratum);
+  stratum(Child, ChildStratum),
+  ParentStratum =/= ChildStratum,
+  dependency(Parent, Child, _NeedStratumChange);
 
-% It would be better to use symbols for stratums
-% to explicitly show that they are not ordered,
-% only stratum_dependency define ordering
-symbol(1, a)@1; symbol(2, b)@1; symbol(3, c)@1; symbol(4, d)@1; symbol(5, e)@1;
-symbol(6, f)@1; symbol(7, g)@1; symbol(8, h)@1; symbol(9, i)@1; symbol(10, j)@1;
-symbol(11, k)@1; symbol(12, l)@1; symbol(13, m)@1; symbol(14, n)@1; symbol(15, o)@1;
-symbol(16, p)@1; symbol(17, q)@1; symbol(18, r)@1; symbol(19, s)@1; symbol(20, t)@1;
-symbol(21, u)@1; symbol(22, v)@1; symbol(23, w)@1; symbol(24, x)@1; symbol(25, y)@1;
-symbol(26, z)@1;
+
+
+already_assigned(Name) :-
+  stratum(Name, _Stratum);
+
+selected(Name) :-
+  % if no bad dependency, and at least one already marked
+  % then propagate further
+  vertex(Name),
+  notin cycle(Name),
+  notin has_bad_dependencies(Name);
+selected(Name) :-
+  cycle(Name),
+  notin has_bad_external_dependencies_in_cycle(Name);
+
+
+has_bad_dependencies(Name) :-
+  has_bad_dependency(Name, _Child);
+
+has_bad_dependency(Name, Child) :-
+  notin cycle(Name),
+  dependency(Name, Child, NeedStratumChange),
+  NeedStratumChange = true,
+  notin already_assigned(Child);
+has_bad_dependency(Name, Child) :-
+  % if rule is in cycle, then we count only
+  % dependencies that do not belong to cycle
+  cycle(Name),
+  dependency(Name, Child, _NeedStratumChange),
+  notin same_cycle(Name, Child),
+  has_bad_dependency(Name, Child);
+
+% If we have a rule in same cycle
+% and it has bad dependency that doesn't belong to this cycle
+% then it is really bad, should not be selected.
+% Otherwise if we have dependency, but it is inside cycle,
+% then shall proceed.
+has_bad_external_dependencies_in_cycle(Name1) :-
+  same_cycle(Name1, Name2),
+  has_bad_dependencies(Name2);
+
+
+
+next_available_symbol(NextSymbol) :-
+  % we need to pick single symbol for new stratum
+  % since we haven't implemented choose expression yet,
+  % we can't use it. The only way to pick exactly one
+  % new value is to use successor-like structure
+  symbol(NextSymbol),
+  notin first_symbol(NextSymbol),
+  notin already_used_symbol(NextSymbol),
+  already_used_symbol(PrevSymbol),
+  nsym(PrevSymbol, NextSymbol);
+next_available_symbol(Symbol) :-
+  % if first symbol is not used yet, then just pick it
+  notin already_used_symbol(Symbol),
+  first_symbol(Symbol);
+
+symbol(Symbol) :- nsym(Symbol, _);
+symbol(Symbol) :- nsym(_, Symbol);
+
+already_used_symbol(Symbol) :-
+  stratum(_Name, Symbol);
+
+% successor-like relation, next symbol
+first_symbol(a)@1;
+nsym(a,b)@1;nsym(b,c)@1;nsym(c,d)@1;nsym(d,e)@1;nsym(e,f)@1;nsym(f,g)@1;
+nsym(g,h)@1;nsym(h,i)@1;nsym(i,j)@1;nsym(j,k)@1;nsym(k,l)@1;nsym(l,m)@1;
+nsym(m,n)@1;nsym(n,o)@1;nsym(o,p)@1;nsym(p,q)@1;nsym(q,r)@1;nsym(r,s)@1;
+nsym(s,t)@1;nsym(t,u)@1;nsym(u,v)@1;nsym(v,w)@1;nsym(w,x)@1;nsym(x,y)@1;
+nsym(y,z)@1;
+
