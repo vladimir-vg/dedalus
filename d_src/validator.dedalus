@@ -3,6 +3,51 @@
 % This way we can select and specifically query these rules
 % to check if ast is correct.
 
+% since we use negation, we need to explicitly
+% stratify this code. Later when stratifier
+% would work correctly, this can be removed:
+
+'$meta stratum'(first, ast_atom_location)@0;
+'$meta stratum'(first, ast_atom)@0;
+'$meta stratum'(first, ast_atom_int_arg)@0;
+'$meta stratum'(first, ast_atom_sym_arg)@0;
+'$meta stratum'(first, ast_atom_str_arg)@0;
+'$meta stratum'(first, ast_clause_location)@0;
+'$meta stratum'(first, ast_clause)@0;
+'$meta stratum'(first, ast_clause_var_arg)@0;
+'$meta stratum'(first, ast_clause_int_arg)@0;
+'$meta stratum'(first, ast_clause_str_arg)@0;
+'$meta stratum'(first, ast_clause_sym_arg)@0;
+'$meta stratum'(first, ast_body_expr_location)@0;
+'$meta stratum'(first, ast_body_expr)@0;
+'$meta stratum'(first, ast_body_binop)@0;
+'$meta stratum'(first, ast_body_atom)@0;
+'$meta stratum'(first, ast_body_atom_var_time)@0;
+'$meta stratum'(first, ast_body_atom_int_time)@0;
+'$meta stratum'(first, ast_body_choose)@0;
+'$meta stratum'(first, ast_body_choose_key_var)@0;
+'$meta stratum'(first, ast_body_choose_row_var)@0;
+'$meta stratum'(first, ast_body_var_arg)@0;
+'$meta stratum'(first, ast_body_int_arg)@0;
+'$meta stratum'(first, ast_body_sym_arg)@0;
+'$meta stratum'(first, ast_body_str_arg)@0;
+% negated atoms and their deps also must be in first stratum:
+'$meta stratum'(first, var_used_in_expr)@0;
+'$meta stratum'(first, var_present_in_positive)@0;
+
+'$meta stratum'(second, invalid_ast)@0;
+'$meta stratum'(second, err_negation_in_dep_cycle)@0;
+'$meta stratum'(second, err_time_suffix_not_in_async_rule)@0;
+'$meta stratum'(second, err_range_unrestricted_variable)@0;
+'$meta stratum'(second, reachable_with_negation)@0;
+'$meta stratum'(second, predicate_dependency)@0;
+'$meta stratum'(second, reachable)@0;
+'$meta stratum'(second, body_atom_has_time_suffix)@0;
+
+'$meta stratum_dependency'(second, first)@0;
+
+
+
 
 %%%
 %%% Correctness checks to implement:
@@ -210,6 +255,8 @@ invalid_ast :-
   err_negation_in_dep_cycle(_Filename, _Line, _Name);
 invalid_ast :-
   err_time_suffix_not_in_async_rule(_Filename, _Line, _Name);
+invalid_ast :-
+  err_range_unrestricted_variable(_Filename, _Line, _Name);
 
 
 
@@ -258,7 +305,6 @@ err_time_suffix_not_in_async_rule(Filename, Line, Name) :-
   ast_clause(Name, ClauseId, Suffix),
   Suffix =/= '@async',
   ast_body_expr_location(Filename, Line, ExprId),
-  ast_body_expr(ClauseId, ExprId),
   body_atom_has_time_suffix(ExprId);
 
 body_atom_has_time_suffix(ExprId) :-
@@ -270,9 +316,21 @@ body_atom_has_time_suffix(ExprId) :-
 %%%
 %%%
 
-% err_range_unrestricted_variable(Filename, Line, VarName) :-
+err_range_unrestricted_variable(Filename, Line, VarName) :-
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_expr_location(Filename, Line, ExprId),
+  ast_body_atom(ExprId, successor, false),
+  var_used_in_expr(ExprId, VarName),
+  notin var_present_in_positive(ClauseId, VarName);
 
+var_used_in_expr(ExprId, VarName) :-
+  ast_body_var_arg(ExprId, _ArgN, VarName, _LocPrefix);
 
+var_present_in_positive(ClauseId, VarName) :-
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_atom(ExprId, Name, false),
+  Name =/= successor,
+  var_used_in_expr(ExprId, VarName);
 
 % negation
 % We don't support negation yet

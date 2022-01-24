@@ -1,0 +1,16 @@
+test_passed :-
+  err_range_unrestricted_variable(_, 6, 'A'),
+  err_range_unrestricted_variable(_, 8, 'C'),
+
+  err_range_unrestricted_variable(_, 12, 'B'),
+  err_range_unrestricted_variable(_, 13, 'B'),
+  err_range_unrestricted_variable(_, 13, 'C'),
+  err_range_unrestricted_variable(_, 14, 'C'),
+  err_range_unrestricted_variable(_, 14, 'D');
+
+test_failed :-
+  err_range_unrestricted_variable(_, 6, 'B');
+test_failed :-
+  err_range_unrestricted_variable(_, 8, 'B');
+test_failed :-
+  err_range_unrestricted_variable(_, 12, 'A');

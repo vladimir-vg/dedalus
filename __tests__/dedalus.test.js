@@ -58,7 +58,6 @@ const testcases = await findTestcases({
   blacklist: [
     // temorarly turned off tests
     '__tests__/validator/negated_not_in_positive.test.dedalus',
-    '__tests__/eval/successor.test.dedalus',
     '__tests__/eval/negation.test.dedalus',
   ],
   only: [
