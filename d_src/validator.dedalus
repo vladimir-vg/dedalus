@@ -40,6 +40,7 @@
 '$meta stratum'(second, err_time_suffix_not_in_async_rule)@0;
 '$meta stratum'(second, err_range_unrestricted_variable)@0;
 '$meta stratum'(second, err_negated_not_in_positive)@0;
+'$meta stratum'(second, err_wrong_rule_name)@0;
 '$meta stratum'(second, reachable_with_negation)@0;
 '$meta stratum'(second, predicate_dependency)@0;
 '$meta stratum'(second, reachable)@0;
@@ -347,7 +348,18 @@ err_negated_not_in_positive(Filename, Line, VarName) :-
   var_used_in_expr(ExprId, VarName),
   notin var_present_in_positive(ClauseId, VarName);
 
+%%%
+%%%
+%%%
 
+err_wrong_rule_name(Filename, Line, Name) :-
+  ast_clause_location(Filename, Line, ClauseId),
+  ast_clause(Name, ClauseId, _Suffix),
+  Name = successor;
+err_wrong_rule_name(Filename, Line, Name) :-
+  ast_clause_location(Filename, Line, ClauseId),
+  ast_clause(Name, ClauseId, _Suffix),
+  Name = choose;
 
 % we need to transform rules with choose rules
 % need to generate new ids for helper rules

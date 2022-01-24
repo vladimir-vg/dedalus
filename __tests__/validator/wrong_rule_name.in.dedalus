@@ -1,0 +1,14 @@
+fact1(one)@1;
+fact1(two)@1;
+
+successor(A, B) :-
+  fact1(A),
+  fact1(B);
+
+choose(A, B) :-
+  fact1(A),
+  fact1(B);
+
+okay_name(A, B) :-
+  fact1(A),
+  fact1(B);

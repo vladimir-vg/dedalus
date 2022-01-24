@@ -1,0 +1,6 @@
+test_passed :-
+  err_wrong_rule_name(_, 4, successor),
+  err_wrong_rule_name(_, 8, choose);
+
+test_failed :-
+  err_wrong_rule_name(_, 12, _);
