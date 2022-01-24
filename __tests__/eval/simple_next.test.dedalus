@@ -1,0 +1,35 @@
+
+% when we have @next rules, code will be executed till fixpoint
+%
+% here we use negation only in @next, rule, which are always executed in separate startum
+% so, we can avoid writing down explicit stratification
+
+path(1, 2)@10;
+path(2, 3)@10;
+path(3, 4)@10;
+position(2)@10;
+
+point(P) :- path(P, _);
+point(P) :- path(_, P);
+
+% just keep paths as is
+path(A, B)@next :- path(A, B);
+
+position(P)@next :-
+  % keep the old position
+  % if next point doesn't exist
+  position(P),
+  point(P1),
+  notin path(P, P1);
+position(P)@next :-
+  position(P1),
+  path(P1, P);
+
+test_passed :-
+  % eventually we must reach last point
+  position(4);
+
+test_failed(P) :-
+  % at very end, only single position must stay
+  position(P),
+  P =/= 4;
