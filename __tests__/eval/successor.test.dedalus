@@ -1,0 +1,30 @@
+fact(alice, 1,  10  )@1;
+fact(bob,   2,  20  )@1;
+fact(chris, 10, 21  )@1;
+fact(ivan,  3,  100 )@1;
+
+adjacent_by_first(Name1, Name2) :-
+  adjacent_by_first(Name2, Name1);
+adjacent_by_first(Name1, Name2) :-
+  fact(Name1, A1, _),
+  fact(Name2, A2, _),
+  successor(A1, A2);
+
+adjacent_by_second(Name1, Name2) :-
+  adjacent_by_second(Name2, Name1);
+adjacent_by_second(Name1, Name2) :-
+  fact(Name1, _, B1),
+  fact(Name2, _, B2),
+  successor(B1, B2);
+
+
+
+test_passed :-
+  adjacent_by_first(alice, bob),
+  adjacent_by_first(bob, ivan),
+  adjacent_by_second(bob, chris);
+
+test_failed :-
+  adjacent_by_first(alice, ivan);
+test_failed :-
+  adjacent_by_second(alice, bob);
