@@ -253,12 +253,11 @@
 %   ast_body_atom_var_time(ClauseN, RuleN2, VarName2),
 %   VarName1 =/= VarName2;
 
-invalid_ast :-
-  err_negation_in_dep_cycle(_Filename, _Line, _Name);
-invalid_ast :-
-  err_time_suffix_not_in_async_rule(_Filename, _Line, _Name);
-invalid_ast :-
-  err_range_unrestricted_variable(_Filename, _Line, _Name);
+invalid_ast :- err_negation_in_dep_cycle(_,_,_);
+invalid_ast :- err_time_suffix_not_in_async_rule(_,_,_);
+invalid_ast :- err_range_unrestricted_variable(_,_,_);
+invalid_ast :- err_negated_not_in_positive(_,_,_);
+invalid_ast :- err_wrong_rule_name(_,_,_);
 
 
 
@@ -338,9 +337,6 @@ var_present_in_positive(ClauseId, VarName) :-
 %%%
 %%%
 
-% negation
-% We don't support negation yet
-%
 err_negated_not_in_positive(Filename, Line, VarName) :-
   ast_body_expr(ClauseId, ExprId),
   ast_body_expr_location(Filename, Line, ExprId),
