@@ -39,6 +39,7 @@
 '$meta stratum'(second, err_negation_in_dep_cycle)@0;
 '$meta stratum'(second, err_time_suffix_not_in_async_rule)@0;
 '$meta stratum'(second, err_range_unrestricted_variable)@0;
+'$meta stratum'(second, err_negated_not_in_positive)@0;
 '$meta stratum'(second, reachable_with_negation)@0;
 '$meta stratum'(second, predicate_dependency)@0;
 '$meta stratum'(second, reachable)@0;
@@ -332,20 +333,19 @@ var_present_in_positive(ClauseId, VarName) :-
   Name =/= successor,
   var_used_in_expr(ExprId, VarName);
 
+%%%
+%%%
+%%%
+
 % negation
 % We don't support negation yet
 %
-% err_negated_not_in_positive(Filename, Line, VarName) :-
-%   ast_body_expr(Filename, Line, ClauseN, RuleN),
-%   ast_body_atom(ClauseN, RuleN, _Name, Negated),
-%   Negated = true,
-%   ast_body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix),
-%   notin var_present_in_positive_rule(ClauseN, VarName);
-
-% var_present_in_positive_rule(ClauseN, VarName) :-
-%   ast_body_atom(ClauseN, RuleN, _Name, Negated),
-%   Negated = false,
-%   ast_body_var_arg(ClauseN, RuleN, _ArgN, VarName, _LocPrefix);
+err_negated_not_in_positive(Filename, Line, VarName) :-
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_expr_location(Filename, Line, ExprId),
+  ast_body_atom(ExprId, _Name, true),
+  var_used_in_expr(ExprId, VarName),
+  notin var_present_in_positive(ClauseId, VarName);
 
 
 
