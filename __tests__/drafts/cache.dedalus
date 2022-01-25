@@ -1,0 +1,83 @@
+
+% amount of memory in bytes we are allowed to use for cached chunks
+cache_size(cache1, 1000)@1;
+% number of rows that we allowed to keep in the table
+cache_table_size(cache1, 10)@1;
+
+% location variable
+storage(cache1, storage1)@1;
+
+read_request_pending(T, Client, Cache, DataKey)@async :-
+  read_request(Client, Cache, DataKey)@T;
+
+read_request_pending(T, Client, Cache, DataKey)@next :-
+  read_request_pending(T, Client, Cache, DataKey),
+  notin storage_read_response(_Storage, Cache, DataKey, _DataSize, _Data);
+
+% if we have Data already stored in cache, just return it
+read_response(#Client, Cache, DataKey, Data)@async :-
+  read_request(Client, #Cache, DataKey),
+  cache_row(#Cache, DataKey, _DataSize, Data);
+
+% if requested Data is not in cache, then send a request
+storage_read_request(#Storage, Cache, DataKey)@async :-
+  read_request(Client, #Cache, DataKey),
+  notin cache_row(#Cache, DataKey, _DataSize),
+  storage(#Cache, Storage);
+
+% if we received response from storage, then we need to save it
+key_to_save(DataKey) :-
+  storage_read_response(_Storage, _Cache, DataKey, _DataSize, _Data);
+
+row_to_save_pending(Cache, DataKey, DataSize, Data)@next :-
+  storage_read_response(_Storage, Cache, DataKey, DataSize, Data),
+  notin persisted(Cache, DataKey);
+row_to_save_pending(Cache, DataKey, DataSize, Data)@next :-
+  row_to_save_pending(Cache, DataKey, DataSize, Data),
+  notin persisted(Cache, DataKey);
+
+persisted(Cache, DataKey) :-
+  cache_row(Cache, DataKey, _DataSize, _Data);
+
+peristed_rows_count(Cache, count<DataKey>) :-
+  cache_row(Cache, DataKey, _DataSize, _Data);
+
+has_space_for_a_row(Cache) :-
+  cache_table_size(Cache, Size),
+  peristed_rows_count(Cache, Count),
+  Size > Count;
+
+cache_row(Cache, DataKey, DataSize, Data)@next :-
+  have_space_for_a_row(Cache),
+  row_selected_for_persistance(Cache, DataKey, DataSize, Data);
+cache_row(Cache, DataKey, DataSize, Data)@next :-
+  notin have_space_for_a_row(Cache),
+  row_selected_for_persistance(Cache, DataKey, DataSize, Data),
+  row_selected_for_purge(Cache, DataKey, _DataKeyToRemove);
+cache_row(Cache, DataKey, DataSize, Data)@next :-
+  cache_row(Cache, DataKey, DataSize, Data),
+  notin row_selected_for_purge(Cache, _DataKeyToAdd, DataKey);
+
+row_selected_for_purge(Cache, DataKeyToAdd, DataKeyToRemove) :-
+  row_selected_for_persistance(Cache, DataKeyToAdd, _DataSize, _Data),
+  persisted(Cache, DataKeyToRemove),
+  choose((Cache, DataKeyToAdd), (DataKeyToRemove));
+
+row_selected_for_persistance(Cache, DataKey, DataSize, Data) :-
+  % just pick a single row, among all pending
+  row_to_save_pending(Cache, DataKey, DataSize, Data),
+  choose((), (Cache, DataKey, DataSize, Data));
+
+
+
+% % request from client to cache
+% read_request(Client, Cache, DataKey)
+% read_response(Client, Cache, DataKey, DataSize, Data)
+
+% % requests with a storage
+% storage_read_request(Storage, Cache, DataKey)
+% storage_read_response(Storage, Cache, DataKey, DataSize, Data)
+
+% cache_row(Cache, DataKey, DataSize, Data)
+
+
