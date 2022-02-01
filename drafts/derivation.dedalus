@@ -1,0 +1,66 @@
+% just ideas about derivatives of the programs
+
+
+edge(a,b)@1;
+edge(b,c)@1;
+edge(c,a)@1;
+edge(c,d)@1;
+edge(e,d)@1;
+
+reachable(A, B) :- edge(A, B);
+reachable(A, B) :- edge(A, C), reachable(C, B);
+
+cycle(A) :- reachable(A, A);
+
+triangle_cycle(A, B, C) :-
+  edge(A, B),
+  edge(B, C),
+  edge(C, A);
+
+
+% after deduction:
+
+reachable(a,b)@1;
+reachable(b,c)@1;
+reachable(c,a)@1;
+reachable(c,d)@1;
+reachable(e,d)@1;
+
+reachable(a,c)@1;
+reachable(c,c)@1;
+reachable(a,d)@1;
+reachable(b,d)@1;
+
+cycle(c)@1;
+
+triangle_cycle(a, b, c)@1;
+triangle_cycle(b, c, a)@1;
+triangle_cycle(c, a, b)@1;
+
+% Let's just think about it. Let's consider only single stratum clauses.
+% No negation or aggregation for now.
+%
+% F -- set of input facts
+% P -- deduction clauses
+% P(F) -- resulting facts, fixpoint of P
+%
+% dF -- change to the input facts. It may specify addition or removal particular facts
+%
+% dP -- program derivative. Takes previous result, change to input and returns next result
+%
+% this must hold:
+%
+% P(F + dF) = P(F) + dP(P(F), dF)
+%
+% Once we have P(F) which might be computationally expensive to acquire,
+% we can reuse it to compute P(F + F_d).
+%
+% F:
+% edge(a, b)
+% edge(b,c)
+%
+% dF:
+% add_edge(b,d)
+% remove_edge(a,b)
+%
+%
