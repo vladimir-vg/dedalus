@@ -1,5 +1,6 @@
 '$meta stratum'(first, edge)@0;
 '$meta stratum'(first, vertex)@0;
+'$meta stratum'(first, has_parent)@0;
 
 '$meta stratum'(second, top)@0;
 '$meta stratum'(second, test_passed)@0;
@@ -22,7 +23,10 @@ vertex(A) :- edge(_, A);
 
 top(Vertex) :-
   vertex(Vertex),
-  notin edge(_Parent, Vertex);
+  notin has_parent(Vertex);
+
+has_parent(Vertex) :-
+  edge(_Parent, Vertex);
 
 test_passed :-
   top(1),

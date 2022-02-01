@@ -1,3 +1,5 @@
+import { performance } from 'perf_hooks';
+
 import _ from 'lodash';
 
 import { mergeFactsDeep, collectListFromFacts } from '../ast.js';
@@ -75,7 +77,7 @@ const collectBodyConditions = (ast, clauseId) => {
     const params = collectExprArgs(ast, exprId);
     // number of args must be checked by validator
     const op = isNegated ? 'succ-neg' : 'succ';
-    if (!params[1]) debugger
+    // if (!params[1]) debugger
     items.push([params[0], op, params[1]]);
   });
 
@@ -91,6 +93,7 @@ const prepareDeductiveClauses = (ast) => {
 
     const keep = (row) => _.isEqual(row[0], clauseId);
     const getPairSimpleValue = ([id, index, value]) => [index, value];
+    // const t0 = performance.now();
     const params = collectListFromFacts(ast, {
       'ast_clause_var_arg/5': {
         keep,
@@ -101,13 +104,21 @@ const prepareDeductiveClauses = (ast) => {
       'ast_clause_str_arg/3': { keep, getPair: getPairSimpleValue },
       'ast_clause_sym_arg/3': { keep, getPair: getPairSimpleValue },
     });
+    // const t1 = performance.now();
 
     const key = `${name['symbol']}/${params.length}`;
 
+    // const t2 = performance.now();
     const bodyFacts = collectBodyFacts(ast, clauseId);
+    // const t3 = performance.now();
     const bodyConditions = collectBodyConditions(ast, clauseId);
+    // const t4 = performance.now();
 
-    clauses.push({ key, params, bodyFacts, bodyConditions });
+    // console.log(name['symbol'], { collect: t1-t0, bodyFacts: t3-t2, bodyConditions: t4-t3 });
+
+    const deps = bodyFacts.map(({ key }) => key);
+
+    clauses.push({ key, params, bodyFacts, bodyConditions, deps });
   });
   return clauses;
 };
@@ -121,6 +132,7 @@ const produceFactsUsingDeductiveRules = (clauses, facts) => {
   return clauses.reduce((newFacts, clause) => {
     const { key, params, bodyFacts, bodyConditions } = clause;
     const positiveBodyFacts = bodyFacts.filter(({ isNegated }) => !isNegated);
+    // const positiveBodyFacts = _.sortBy(positiveBodyFacts0, ({ key }) => (facts.get(key) ?? []).length);
     const negativeBodyFacts = bodyFacts.filter(({ isNegated }) => isNegated);
     const positiveTables = positiveBodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
     const negativeTables = negativeBodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
@@ -216,12 +228,25 @@ class Interpreter {
       // collect all deductive rules
       // { key, params, bodyFacts: [{ key, params }, ...], bodyConditions: [[a, op, b], ...] }
       // conditions must come after facts in the body
+
+      // const t0 = performance.now();
       const clauses = prepareDeductiveClauses(rules);
+      // const t1 = performance.now();
+      // console.log({ prepare: t1-t0 });
+      
+      let keysUpdated = [...accumulatedFacts.keys()];
   
       do {
-        const newFacts = produceFactsUsingDeductiveRules(clauses, accumulatedFacts);
+        const relevantClauses = clauses.filter(({ deps }) =>
+          deps.some(dep => keysUpdated.includes(dep)));
+
+        // const t2 = performance.now();
+        const newFacts = produceFactsUsingDeductiveRules(relevantClauses, accumulatedFacts);
+        // const t3 = performance.now();
         accumulatedFacts = mergeFactsDeep(accumulatedFacts, newFacts);
         newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
+        // console.log({ produce: t3-t2, clausesCount: relevantClauses.length });
+        keysUpdated = [...newFacts.keys()];
       } while (newTuplesCount > 0);
     });
 

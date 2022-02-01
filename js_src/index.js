@@ -14,6 +14,13 @@ import _ from 'lodash';
 
 
 
+// current runtime is terribly slow,
+// validation makes execution even longer
+// skip it sometimes, when want to iterate
+const SKIP_VALIDATION = false;
+
+
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -73,7 +80,7 @@ const runDeductively = async (inputFacts, dedalusText, path, opts = {}) => {
   const astFactsT0 = await parseDedalus(dedalusText, path);
   const { explicitStrata, astTFacts } = extractMetadata(astFactsT0);
 
-  if (!skipValidation) {
+  if (!SKIP_VALIDATION && !skipValidation) {
     const tFacts = await validateFile(dedalusText, path);
     // FIXME: dirty hack for now, just pick first timestamp
     // it always gonna be AST_TIMESTAMP.
