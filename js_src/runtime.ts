@@ -17,9 +17,31 @@
     Or until there would be certain @async tuple send.
 */
 
-// abstract class
-class Runtime {
-  constructor(clauses, options) {
+// enum VType {
+//   Integer = "integer",
+//   Symbol = "symbol",
+//   String = "string",
+// }
+
+type Tuples = {
+  // for now we don't have information about
+  // fields types, thus store values of all types together
+
+  // types: VType[],
+  rows: any[][],
+}
+type Facts = Map<string, Tuples>;
+type TFacts = Map<number, Facts>;
+
+type OutputListener = (facts: Facts) => void;
+
+
+abstract class Runtime {
+  paused: boolean;
+  tillFixpointPromise: Promise<void> | null;
+  fixpointResolve: () => void | null;
+
+  constructor(clauses, initialTFacts: TFacts, options: any) {
     this.paused = true;
     this.tillFixpointPromise = null;
     this.fixpointResolve = null;
@@ -29,39 +51,49 @@ class Runtime {
   // key specifies which @async predicate callback is waiting for.
   // if key is not specified, then callback will be triggered
   // for all output @async predicates
-  async addOutputListener({ key, callback }) {
-    throw new Error('Must be overriden by implementation');
-  }
+  //
+  // promise is resolved only after listener is active
+  abstract addOutputListener(opts: { key?: string, callback: OutputListener }): Promise<void>;
 
-  async removeOutputListener({ key, callback }) {
-    throw new Error('Must be overriden by implementation');
-  }
+  // promise is resolved only after listener was removed
+  abstract removeOutputListener(opts: { key?: string, callback: OutputListener }): Promise<void>;
 
   // runs a query against current state
   // basically, works as usual Datalog,
   // does not involve @async or @next rules in computation
   //
-  // If runtime is not paused (currently runs tickTillStateFixpoint)
-  // then query is ran against one timestamp picked by runtime.
+  // if runtime is paused, then query is executed against current state
+  //
+  // if runtime is not paused (ongoing till fixpoint computation),
+  // then query is executed against some state that was not earlier
+  // then the query call
+  //
   // so, it should be possible to run query and ticking till fixpoint in parallel.
-  async query(expr) {
-    throw new Error('Must be overriden by implementation');
-  }
+  //
+  // Query returns all entries for given keys.
+  // User can add desired queries as part of the source code,
+  // and then select their values by specifying their keys
+  abstract query(keys: string[]): Promise<Facts>;
 
   // adds tuples to be received asyncronously, eventually
   // it does not guarantee that all these tuples would be
   // delivered at once
-  async enqueueInput({ key, tuples }) {
-    throw new Error('Must be overriden by implementation');
-  }
+  abstract enqueueInput(facts: Facts);
  
   // makes single timestamp step computation
-  async tick() {
-    throw new Error('Must be overriden by implementation');
+  // promise is resolved once tick was completed
+  tick(): Promise<void> {
+    if (!!this.tillFixpointPromise) {
+      throw new Error('Till fixpoint computation is ongoing');
+    }
+    return this._tick();
   }
 
+  abstract _tick(): Promise<void>;
+
   // runs ticks over and over, util there is no change in state.
-  tickTillStateFixpoint() {
+  // returns promise
+  tickTillStateFixpoint(): Promise<void> {
     // if we already have a promise that waits fixpoint then return just it
     if (this.tillFixpointPromise) { return this.tillFixpointPromise; }
   
@@ -74,25 +106,26 @@ class Runtime {
     return this.tillFixpointPromise;
   }
 
+  // should call resolve() once fixpoint is reached
+  abstract _tickTillStateFixpoint(resolve: () => void): Promise<void>;
+
   // if runtime runs ticks over and over till fixpoint
   // then it can be paused using this method.
   // You need to pause computation in order
   // to make consistent queries
-  async pause() {
-    await this._pause();
-    this.paused = true;
+  pause(): Promise<void> {
+    if (this.paused) { return Promise.resolve(); }
+    return this._pause().then(() => {
+      this.paused = true;
+      return;
+    });
   }
 
-  //
-  // private methods, not supposed to be called by user:
-  //
+  abstract _pause(): Promise<void>;
+};
 
-  async _pause() {
-    throw new Error('Must be overriden by implementation');
-  }
 
-  // should call resolve() once fixpoint is reached
-  async _tickTillStateFixpoint(resolve) {
-    throw new Error('Must be overriden by implementation');
-  }
+
+export {
+  Runtime
 }

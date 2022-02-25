@@ -12,6 +12,7 @@ import { prettyPrintFacts, prettyPrintAST } from './prettyprint.js';
 import { Interpreter } from './naive_runtime/interpreter.js';
 import _ from 'lodash';
 
+import { Runtime } from './runtime.ts';
 
 
 // current runtime is terribly slow,
