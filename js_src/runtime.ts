@@ -33,18 +33,31 @@ type Tuples = {
 type Facts = Map<string, Tuples>;
 type TFacts = Map<number, Facts>;
 
-type OutputListener = (facts: Facts) => void;
+type RuntimeOutputListener = (facts: Facts) => void;
 
+type Clause = {
+  key: string,
+  params: any[],
+  bodyFacts: any[],
+  bodyConditions: any[],
+  
+  // produced from bodyFacts
+  deps: string[],
+}
+
+type Program = {
+  deductive: Clause[],
+  inductive: Clause[],
+  asynchronous: Clause[],
+};
 
 abstract class Runtime {
   paused: boolean;
   tillFixpointPromise: Promise<void> | null;
-  fixpointResolve: () => void | null;
 
-  constructor(clauses, initialTFacts: TFacts, options: any) {
+  constructor(program: Program, initialTFacts: TFacts, options: any) {
     this.paused = true;
     this.tillFixpointPromise = null;
-    this.fixpointResolve = null;
   }
 
   // register for output messages
@@ -53,10 +66,10 @@ abstract class Runtime {
   // for all output @async predicates
   //
   // promise is resolved only after listener is active
-  abstract addOutputListener(opts: { key?: string, callback: OutputListener }): Promise<void>;
+  abstract addOutputListener(opts: { key?: string, callback: RuntimeOutputListener }): Promise<void>;
 
   // promise is resolved only after listener was removed
-  abstract removeOutputListener(opts: { key?: string, callback: OutputListener }): Promise<void>;
+  abstract removeOutputListener(opts: { key?: string, callback: RuntimeOutputListener }): Promise<void>;
 
   // runs a query against current state
   // basically, works as usual Datalog,
@@ -77,7 +90,8 @@ abstract class Runtime {
 
   // adds tuples to be received asyncronously, eventually
   // it does not guarantee that all these tuples would be
-  // delivered at once
+  // delivered at once. It also does not provide any information
+  // when they're delivered
   abstract enqueueInput(facts: Facts);
  
   // makes single timestamp step computation
@@ -127,5 +141,10 @@ abstract class Runtime {
 
 
 export {
-  Runtime
+  Runtime,
+  RuntimeOutputListener,
+  Program,
+  Clause,
+  Facts,
+  TFacts,
 }

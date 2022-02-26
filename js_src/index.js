@@ -6,13 +6,11 @@ import peg from 'peggy';
 import {
   sourceFactsFromAstFacts, tree2facts, rulesFromAstFacts, mergeTFactsDeep,
   extractMetadata,
-} from './ast.js';
+} from './ast';
 import { prettyPrintFacts, prettyPrintAST } from './prettyprint.js';
 
 import { Interpreter } from './naive_runtime/interpreter.js';
 import _ from 'lodash';
-
-import { Runtime } from './runtime.ts';
 
 
 // current runtime is terribly slow,

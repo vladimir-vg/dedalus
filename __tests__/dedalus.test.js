@@ -8,6 +8,8 @@ import _ from 'lodash';
 import { validateFile, parseDedalus, runDeductively } from '../js_src/index.js';
 import { prettyPrintFacts, prettyPrintAST } from '../js_src/index.js';
 
+import { NaiveRuntime } from '../js_src/naive_runtime/index.ts';
+
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -137,6 +139,41 @@ describe('eval', () => {
 
 const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) => {
   const { inputHasAST } = opts;
+
+  const matchingTFacts = await runDeductively(inputFacts, matcherText, matcherPath);
+  const lastTimestamp = [...matchingTFacts.keys()].reduce((t1, t2) => Math.max(t1,t2));
+  const matchingFacts = matchingTFacts.get(lastTimestamp);
+
+  const testPassedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_passed'));
+  const testFailedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_failed'));
+
+  // if we have test_failed, then failed
+  // if we don't have any test_passed, then also failed
+  // otherwise passed
+  const hasAtLeastOneFailure = _.some(testFailedKeys, key => 
+    matchingFacts.get(key).length !== 0);
+  const hasAtLeastOnePass = _.some(testPassedKeys, key => 
+    matchingFacts.get(key).length !== 0);
+  
+  if (hasAtLeastOneFailure || !hasAtLeastOnePass) {
+    console.log(prettyPrintFacts(matchingTFacts));
+
+    if (inputHasAST) {
+      console.log(prettyPrintAST(matchingFacts))
+    }
+  }
+  
+  expect(hasAtLeastOneFailure).toEqual(false);
+  expect(hasAtLeastOnePass).toEqual(true);
+};
+
+
+
+// version that uses Runtime interface
+const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) => {
+  const { inputHasAST } = opts;
+
+  const rt1 = new NaiveRuntime();
 
   const matchingTFacts = await runDeductively(inputFacts, matcherText, matcherPath);
   const lastTimestamp = [...matchingTFacts.keys()].reduce((t1, t2) => Math.max(t1,t2));

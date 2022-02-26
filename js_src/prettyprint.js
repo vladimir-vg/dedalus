@@ -1,6 +1,6 @@
 import _ from "lodash";
 
-import { collectListFromFacts } from './ast.js';
+import { collectListFromFacts } from './ast';
 
 
 
