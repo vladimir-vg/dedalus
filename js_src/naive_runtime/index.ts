@@ -1,10 +1,12 @@
-import { Runtime, RuntimeOutputListener, TFacts, Facts, Program } from '../runtime';
+import {
+  Runtime, RuntimeOutputListener, TFacts, Facts, Program, Strata,
+} from '../runtime';
 
 
 
 class NaiveRuntime extends Runtime {
-  constructor(program: Program, initialTFacts: TFacts, options: any) {
-    super(program, initialTFacts, options);
+  constructor(program: Program, initialTFacts: TFacts, strata: Strata, options?: any) {
+    super(program, initialTFacts, strata, options);
   }
 
   addOutputListener(opts: { key?: string, callback: RuntimeOutputListener }): Promise<void> {
@@ -27,6 +29,10 @@ class NaiveRuntime extends Runtime {
   }
   
   _tickTillStateFixpoint(resolve: () => void): Promise<void> {
+    throw new Error('Not implemented');
+  }
+
+  isFixpointReached(): Promise<boolean> {
     throw new Error('Not implemented');
   }
 

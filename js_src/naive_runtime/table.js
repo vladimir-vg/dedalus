@@ -209,7 +209,7 @@ const aggregateValues = (key, values) => {
     case 'max': return Math.max.apply(null, values);
     case 'min': return Math.min.apply(null, values);
     case 'sum': return _.sum(values);
-    case 'count': { debugger; return values.length};
+    case 'count': { return values.length};
     default:
       throw new Error(`Unknown aggregation function ${key}`);
   }

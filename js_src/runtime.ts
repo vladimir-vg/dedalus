@@ -51,11 +51,16 @@ type Program = {
   asynchronous: Clause[],
 };
 
+type Strata = {
+  vertices: {[stratum: string]: string[]},
+  edges: string[][], // list of pairs
+};
+
 abstract class Runtime {
   paused: boolean;
   tillFixpointPromise: Promise<void> | null;
 
-  constructor(program: Program, initialTFacts: TFacts, options: any) {
+  constructor(program: Program, initialTFacts: TFacts, strata: Strata, options?: any) {
     this.paused = true;
     this.tillFixpointPromise = null;
   }
@@ -123,6 +128,22 @@ abstract class Runtime {
   // should call resolve() once fixpoint is reached
   abstract _tickTillStateFixpoint(resolve: () => void): Promise<void>;
 
+  // returns true, if @next rules produce exactly same state as before
+  // and input queue is empty.
+  //
+  // If execution is paused then it returns current status right away
+  //
+  // If execution is in tickTillStateFixpoint loop,
+  // then it would return status that was true some moment in the past.
+  //
+  // If between isFixpointReached call and result were no enqueueInput calls
+  // then positive result can be trusted.
+  abstract isFixpointReached(): Promise<boolean>;
+
+  isPaused(): boolean {
+    return this.paused;
+  }
+
   // if runtime runs ticks over and over till fixpoint
   // then it can be paused using this method.
   // You need to pause computation in order
@@ -144,6 +165,7 @@ export {
   Runtime,
   RuntimeOutputListener,
   Program,
+  Strata,
   Clause,
   Facts,
   TFacts,

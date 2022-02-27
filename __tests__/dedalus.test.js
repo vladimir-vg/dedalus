@@ -6,9 +6,11 @@ import glob from 'glob-promise';
 import _ from 'lodash';
 
 import { validateFile, parseDedalus, runDeductively } from '../js_src/index.js';
-import { prettyPrintFacts, prettyPrintAST } from '../js_src/index.js';
+import { prettyPrintFacts, prettyPrintAST, processAST } from '../js_src/index.js';
 
 import { NaiveRuntime } from '../js_src/naive_runtime/index.ts';
+import { ast2program } from '../js_src/program';
+import { mergeTFactsDeep } from '../js_src/ast';
 
 
 
@@ -173,31 +175,45 @@ const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) =
 const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) => {
   const { inputHasAST } = opts;
 
-  const rt1 = new NaiveRuntime();
-
-  const matchingTFacts = await runDeductively(inputFacts, matcherText, matcherPath);
-  const lastTimestamp = [...matchingTFacts.keys()].reduce((t1, t2) => Math.max(t1,t2));
-  const matchingFacts = matchingTFacts.get(lastTimestamp);
-
-  const testPassedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_passed'));
-  const testFailedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_failed'));
-
-  // if we have test_failed, then failed
-  // if we don't have any test_passed, then also failed
-  // otherwise passed
-  const hasAtLeastOneFailure = _.some(testFailedKeys, key => 
-    matchingFacts.get(key).length !== 0);
-  const hasAtLeastOnePass = _.some(testPassedKeys, key => 
-    matchingFacts.get(key).length !== 0);
+  const { strata, astClauses, initialTFacts: initialTFacts0, factsKeys } =
+    await processAST(await parseDedalus(matcherText, matcherPath));
   
-  if (hasAtLeastOneFailure || !hasAtLeastOnePass) {
-    console.log(prettyPrintFacts(matchingTFacts));
+  const program = ast2program(astClauses);
+  let minimalTimestamp = 0;
+  if (initialTFacts0.size > 0) {
+    minimalTimestamp = [...initialTFacts0.keys()]
+      .reduce((t1, t2) => Math.max(t1,t2), minimalTimestamp);
+  }
+  const inputTFacts = new Map([[minimalTimestamp, inputFacts]]);
+  const initialTFacts = mergeTFactsDeep(initialTFacts0, inputTFacts);
+  const rt = new NaiveRuntime(program, initialTFacts, strata);
 
+  const testPassedKeys = factsKeys.filter(key => key.startsWith('test_passed'));
+  const testFailedKeys = factsKeys.filter(key => key.startsWith('test_failed'));
+
+  let testFailed = false;
+  let testPassed = false;
+  while (true) {
+    const testPassedFacts = await rt.query(testPassedKeys);
+    const testFailedFacts = await rt.query(testFailedKeys);
+    const hasAtLeastOnePass = (0 !== testPassedFacts.size());
+    const hasAtLeastOneFailure = (0 !== testFailedFacts.size());
+
+    const fixpointReached = await rt.isFixpointReached();
+    testPassed = hasAtLeastOnePass && !hasAtLeastOneFailure;
+    testFailed = hasAtLeastOneFailure || (!hasAtLeastOnePass && fixpointReached);
+
+    if (testFailed || testPassed) { break; }
+
+    await rt.tick();
+  }
+
+  if (testFailed) {
+    console.log(prettyPrintFacts(matchingTFacts));
     if (inputHasAST) {
       console.log(prettyPrintAST(matchingFacts))
     }
   }
-  
-  expect(hasAtLeastOneFailure).toEqual(false);
-  expect(hasAtLeastOnePass).toEqual(true);
+
+  expect(testFailed).toEqual(false);
 };

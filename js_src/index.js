@@ -184,6 +184,23 @@ const runFile = async (dedalusText, path) => {
 
 
 
+const processAST = async (astTFacts0) => {
+  // TODO: remove AST_TIMESTAMP, it doesn't help, useless
+  // always return facts, not tfacts.
+  const { explicitStrata, astTFacts } = extractMetadata(astTFacts0);
+  const astClauses = rulesFromAstFacts(astTFacts);
+  let strata = explicitStrata ?? await computeStrata(astClauses);
+  const initialTFacts = sourceFactsFromAstFacts(astTFacts);
+
+  const clausesKeys = astClauses.get('ast_clause/3').map(t => t[0]['symbol']);
+  const initialFactsKeys = [...initialTFacts].flatMap(([_timestamp, facts]) => [...facts.keys()]);
+  const factsKeys = _.uniq([...clausesKeys, ...initialFactsKeys]);
+
+  return { strata, astClauses, initialTFacts, factsKeys };
+};
+
+
+
 export {
   parseDedalus,
   runFile,
@@ -191,4 +208,5 @@ export {
   prettyPrintFacts,
   prettyPrintAST,
   runDeductively,
+  processAST,
 }
