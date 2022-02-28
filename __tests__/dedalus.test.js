@@ -69,7 +69,8 @@ const testcases = await findTestcases({
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    '__tests__/validator/inconsistent_number_of_fields.test.dedalus',
+    // '__tests__/eval/simple_next.test.dedalus',
+    // '__tests__/parser/various.test.dedalus',
   ],
 });
 
@@ -173,6 +174,13 @@ const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) =
 
 
 
+const countUniqFacts = (facts) => {
+  return [... facts.values()]
+    .map(tuples => tuples.length)
+    .reduce((a, b) => a+b, 0);
+}
+
+
 // version that uses Runtime interface
 const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) => {
   const { inputHasAST, noInduction } = opts;
@@ -198,14 +206,17 @@ const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) 
   while (true) {
     const testPassedFacts = await rt.query(testPassedKeys);
     const testFailedFacts = await rt.query(testFailedKeys);
-    const hasAtLeastOnePass = (0 !== testPassedFacts.size);
-    const hasAtLeastOneFailure = (0 !== testFailedFacts.size);
+    const hasAtLeastOnePass = (0 !== countUniqFacts(testPassedFacts));
+    const hasAtLeastOneFailure = (0 !== countUniqFacts(testFailedFacts));
 
     const fixpointReached = await rt.isFixpointReached();
     testPassed = hasAtLeastOnePass && !hasAtLeastOneFailure;
-    testFailed = hasAtLeastOneFailure || (!hasAtLeastOnePass && fixpointReached);
+    // testFailed = hasAtLeastOneFailure || (!hasAtLeastOnePass && fixpointReached);
+    testFailed = fixpointReached && !testPassed; // hasAtLeastOneFailure || (!hasAtLeastOnePass && fixpointReached);
 
-    if (noInduction || testFailed || testPassed) { break; }
+    if (noInduction) { break; }
+
+    if (testFailed || testPassed) { debugger; break; }
 
     await rt.tick();
   }
@@ -214,7 +225,8 @@ const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) 
     const allDeductedFacts = await rt.query(factsKeys);
     const currentTimestamp = rt.getCurrentTimestamp();
     const allDeductedTFacts = new Map([[currentTimestamp, allDeductedFacts]]);
-    console.log(prettyPrintFacts(allDeductedTFacts));
+
+    console.log(`for ${matcherPath}:\n` + prettyPrintFacts(allDeductedTFacts));
     if (inputHasAST) {
       console.log(prettyPrintAST(allDeductedTFacts))
     }

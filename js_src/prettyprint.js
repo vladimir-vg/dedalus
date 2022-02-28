@@ -49,8 +49,7 @@ const prettyPrintValue = (value) => {
 const prettyPrintFacts = (tFacts) => {
   const lines = [...tFacts].flatMap(([timestamp, facts]) => {
     return [...facts].flatMap(([key, tuples]) => {
-      const [name1, _arity] = key.split('/');
-      const name = {symbol: name1};
+      const name = {symbol: key};
       return tuples.map(args => {
         if (args.length === 0) {
           return `${ppSymbol(name)}@${ppInt(timestamp)};`;
@@ -74,19 +73,19 @@ const prettyPrintFacts = (tFacts) => {
 
 
 const atomsAndClausesByFileAndLineNum = (astFacts) => {
-  const atomsFilenames = (astFacts.get('ast_atom_location/3') ?? [])
+  const atomsFilenames = (astFacts.get('ast_atom_location') ?? [])
     .map(t => t[0]);
-  const clausesFilenames = (astFacts.get('ast_clause_location/3') ?? [])
+  const clausesFilenames = (astFacts.get('ast_clause_location') ?? [])
     .map(t => t[0]);
   const filenames = _.uniqBy(
     [...atomsFilenames, ...clausesFilenames],
     _.isEqual);
   
   return (new Map(filenames.map(filename => {
-    const atomsPairs = (astFacts.get('ast_atom_location/3') ?? [])
+    const atomsPairs = (astFacts.get('ast_atom_location') ?? [])
       .filter(t => _.isEqual(t[0], filename))
       .map(([_, line, atomId]) => ({ atomId, line }));
-    const clausesPairs = (astFacts.get('ast_clause_location/3') ?? [])
+    const clausesPairs = (astFacts.get('ast_clause_location') ?? [])
       .filter(t => _.isEqual(t[0], filename))
       .map(([_, line, clauseId]) => ({ clauseId, line }));
     const sortedIds = _.sortBy([...atomsPairs, ...clausesPairs], t => t[0]);
@@ -98,18 +97,18 @@ const atomsAndClausesByFileAndLineNum = (astFacts) => {
 
 const prettyPrintAtom = (astFacts, atomId) => {
   const [name, _id, timestamp] = _.find(
-    astFacts.get('ast_atom/3'),
+    astFacts.get('ast_atom'),
     ([_name, id, _timestamp]) => _.isEqual(id, atomId));
 
   const keep = ([id, index, value]) => _.isEqual(id, atomId);
   const argsStrs = collectListFromFacts(astFacts, {
-    'ast_atom_sym_arg/3': {
+    'ast_atom_sym_arg': {
       keep, getPair: ([id, index, value]) => [index, ppSymbol(value)]
     },
-    'ast_clause_int_arg/3': {
+    'ast_clause_int_arg': {
       keep, getPair: ([id, index, value]) => [index, ppInt(value)]
     },
-    'ast_clause_str_arg/3': {
+    'ast_clause_str_arg': {
       keep, getPair: ([id, index, value]) => [index, ppStr(value)]
     },
   });
@@ -128,40 +127,40 @@ const prettyPrintBodyExpr = (astFacts, exprId, isLastExpr) => {
 
   const keep = ([id, index, name]) => _.isEqual(id, exprId);
   const argsStrs = collectListFromFacts(astFacts, {
-    'ast_body_sym_arg/3': {
+    'ast_body_sym_arg': {
       keep, getPair: ([id, index, value]) => [index, ppSymbol(value)]
     },
-    'ast_body_int_arg/3': {
+    'ast_body_int_arg': {
       keep, getPair: ([id, index, value]) => [index, ppInt(value)]
     },
-    'ast_body_str_arg/3': {
+    'ast_body_str_arg': {
       keep, getPair: ([id, index, value]) => [index, ppStr(value)]
     },
-    'ast_body_var_arg/4': {
+    'ast_body_var_arg': {
       keep, getPair: ([id, index, name, locPrefix]) =>
       [index, ppVar({ name, locPrefix })]
     },
   });
 
   const chooseKeyVars = collectListFromFacts(astFacts, {
-    'ast_body_choose_key_var/3': {
+    'ast_body_choose_key_var': {
       keep, getPair: ([id, index, name]) => [index, ppVar({ name })]
     },
   });
   const chooseRowVars = collectListFromFacts(astFacts, {
-    'ast_body_choose_row_var/3': {
+    'ast_body_choose_row_var': {
       keep, getPair: ([id, index, name]) => [index, ppVar({ name })]
     },
   });
 
   const binop = _.find(
-    astFacts.get('ast_body_binop/2'),
+    astFacts.get('ast_body_binop'),
     ([id, op]) => _.isEqual(id, exprId));
   const atom = _.find(
-    astFacts.get('ast_body_atom/3'),
+    astFacts.get('ast_body_atom'),
     ([id, name, negated]) => _.isEqual(id, exprId));
   const choose = _.find(
-    astFacts.get('ast_body_choose/1'),
+    astFacts.get('ast_body_choose'),
     ([id]) => _.isEqual(id, exprId));
 
   const numPresent = _.sum([binop, atom, choose].map(e => !!e ? 1 : 0));
@@ -191,10 +190,10 @@ const prettyPrintBodyExpr = (astFacts, exprId, isLastExpr) => {
     }
 
     const intTimestamp = _.find(
-      astFacts.get('ast_body_atom_int_time/2'),
+      astFacts.get('ast_body_atom_int_time'),
       ([id, value]) => _.isEqual(id, exprId));
     const varTimestamp = _.find(
-      astFacts.get('ast_body_atom_var_time/2'),
+      astFacts.get('ast_body_atom_var_time'),
       ([id, value]) => _.isEqual(id, exprId));
     
     if (intTimestamp) {
@@ -222,12 +221,12 @@ const prettyPrintBodyExpr = (astFacts, exprId, isLastExpr) => {
 
 
 const prettyPrintBody = (astFacts, clauseId) => {
-  const exprIds = astFacts.get('ast_body_expr/2')
+  const exprIds = astFacts.get('ast_body_expr')
     .filter(([clauseId1, exprId]) => _.isEqual(clauseId, clauseId1))
     .map(([clauseId1, exprId]) => exprId);
   const exprPairs = exprIds.map((exprId, index) => {
     const [_fname, linenum, _id] = _.find(
-      astFacts.get('ast_body_expr_location/3'),
+      astFacts.get('ast_body_expr_location'),
       ([_fname, _line, exprId1]) => _.isEqual(exprId1, exprId));
     const isLastExpr = (index == exprIds.length-1);
     return [linenum, prettyPrintBodyExpr(astFacts, exprId, isLastExpr)];
@@ -242,21 +241,21 @@ const prettyPrintBody = (astFacts, clauseId) => {
 
 const prettyPrintClause = (astFacts, clauseId) => {
   const [name, _id, suffix] = _.find(
-    astFacts.get('ast_clause/3'),
+    astFacts.get('ast_clause'),
     ([_name, id, _suffix]) => _.isEqual(id, clauseId));
   
   const keep = ([id, _index, _value]) => _.isEqual(id, clauseId);
   const argsStrs = collectListFromFacts(astFacts, {
-    'ast_clause_sym_arg/3': {
+    'ast_clause_sym_arg': {
       keep, getPair: ([id, index, value]) => [index, ppSymbol(value)]
     },
-    'ast_clause_int_arg/3': {
+    'ast_clause_int_arg': {
       keep, getPair: ([id, index, value]) => [index, ppInt(value)]
     },
-    'ast_clause_str_arg/3': {
+    'ast_clause_str_arg': {
       keep, getPair: ([id, index, value]) => [index, ppStr(value)]
     },
-    'ast_clause_var_arg/5': {
+    'ast_clause_var_arg': {
       keep, getPair: ([id, index, name, aggFunc, locPrefix]) =>
       [index, ppVar({ name, aggFunc, locPrefix })]
     },

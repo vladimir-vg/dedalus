@@ -267,10 +267,10 @@ class Table {
 
   // we take certain fact name and map it according to variables
   static fromFacts(facts, key, params) {
-    const [_, n] = key.split('/');
-    if (parseInt(n) != params.length) {
-      throw new Error(`Arity of the tuple ${key} doesn't match variables ${JSON.stringify(params)}`);
-    }
+    // const [_, n] = key.split('/');
+    // if (parseInt(n) != params.length) {
+    //   throw new Error(`Arity of the tuple ${key} doesn't match variables ${JSON.stringify(params)}`);
+    // }
 
     const { rows, columns } = projectFactsToRows((facts.get(key) ?? []), params);
     return new Table(columns, rows);

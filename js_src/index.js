@@ -59,15 +59,15 @@ const computeStrata = async (sourceAst) => {
   // it is correct for programs that limit to deductive rules without negation or aggregation
   const allAtomNames = [...sourceAst].flatMap(([key, tuples]) => {
     switch (key) {
-      case 'ast_atom/3':
-      case 'ast_clause/3':
+      case 'ast_atom':
+      case 'ast_clause':
         return tuples.map(t => t[0]['symbol']);
-      case 'ast_body_atom/3':
+      case 'ast_body_atom':
         return tuples.map(t => t[1]['symbol']);
       default: return [];
     }
   });
-  const vertices = {'statum1': allAtomNames};
+  const vertices = {'stratum1': allAtomNames};
   const edges = [];
   return { vertices, edges };
 };
@@ -86,7 +86,7 @@ const runDeductively = async (inputFacts, dedalusText, path, opts = {}) => {
     // TODO: In future, get rid of timestamps here
     // they are not necessary.
     const facts = tFacts.get(Array.from(tFacts.keys())[0]);
-    if ((facts.get('invalid_ast/0') ?? []).length != 0) {
+    if ((facts.get('invalid_ast') ?? []).length != 0) {
       console.log(prettyPrintFacts(tFacts));
       throw new Error('Received invalid ast for execution');
     }
@@ -192,7 +192,7 @@ const processAST = async (astTFacts0) => {
   let strata = explicitStrata ?? await computeStrata(astClauses);
   const initialTFacts = sourceFactsFromAstFacts(astTFacts);
 
-  const clausesKeys = astClauses.get('ast_clause/3').map(t => t[0]['symbol']);
+  const clausesKeys = astClauses.get('ast_clause').map(t => t[0]['symbol']);
   const initialFactsKeys = [...initialTFacts].flatMap(([_timestamp, facts]) => [...facts.keys()]);
   const factsKeys = _.uniq([...clausesKeys, ...initialFactsKeys]);
 

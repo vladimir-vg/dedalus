@@ -10,7 +10,7 @@ import { Table } from './table';
 
 const factsSubset = (keys: string[], facts: Facts): Facts => {
   return (new Map([...facts].filter(([key, _tuples]) => {
-    return keys.includes(key.split('/')[0]);
+    return keys.includes(key);
   })));
 };
 
@@ -19,9 +19,9 @@ const factsSubset = (keys: string[], facts: Facts): Facts => {
 const produceFactsUsingDeductiveRules = (clauses: Clause[], facts: Facts): Facts => {
   // Just walk all inductive rules (not @async and not @next)
   // one by one and produce all possible new facts from given facts
-  debugger
+  // debugger
   return clauses.reduce((newFacts, clause) => {
-    debugger
+    // debugger
     const { key, params, bodyFacts, bodyConditions } = clause;
     const positiveBodyFacts = bodyFacts.filter(({ isNegated }) => !isNegated);
     // const positiveBodyFacts = _.sortBy(positiveBodyFacts0, ({ key }) => (facts.get(key) ?? []).length);
@@ -34,13 +34,13 @@ const produceFactsUsingDeductiveRules = (clauses: Clause[], facts: Facts): Facts
 
     const rows = table2.projectColumns(params);
 
-    // remove rows that are already present
-    // so we would return only new facts
-    const newRows = rows.filter(row =>
-      !_.find(facts.get(key), row2 => _.isEqual(row, row2)))
+    // // remove rows that are already present
+    // // so we would return only new facts
+    // const newRows = rows.filter(row =>
+    //   !_.find(facts.get(key), row2 => _.isEqual(row, row2)))
 
-    const oldRows = newFacts.get(key) ?? [];
-    newFacts.set(key, [...oldRows, ...newRows]);
+    const collectedRows = newFacts.get(key) ?? [];
+    newFacts.set(key, [...collectedRows, ...rows]);
     return newFacts;
   }, new Map());
 };
@@ -110,7 +110,7 @@ class NaiveRuntime implements Runtime {
     }
     this.currentState = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
     this.deductedFacts = null;
-debugger
+// debugger
     this.tillFixpointPromise = null;
   }
 
@@ -130,7 +130,9 @@ debugger
       this._deductFacts();
     }
 
-    return Promise.resolve(factsSubset(keys, this.deductedFacts));
+    const result = factsSubset(keys, this.deductedFacts);
+    debugger
+    return Promise.resolve(result);
   }
   
   enqueueInput(facts: Facts) {
@@ -147,6 +149,10 @@ debugger
     this.currentTimestamp += 1;
     const initialFacts = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
     this.currentState = mergeFactsDeep(facts, initialFacts) as Facts;
+
+    // this we moved to next timestamp and updated state
+    // we need to clear cached deductedFacts
+    this.deductedFacts = null;
     return Promise.resolve();
   }
   
@@ -209,11 +215,11 @@ debugger
     const { deductive: clauses } = this.program;
 
     let accumulatedFacts: Facts = this.currentState;
-    let keysUpdated = [... this.currentState.keys()].map(key => key.split('/')[0]);
+    let keysUpdated = [... this.currentState.keys()];
 
     stOrder.forEach(stratum => {
       let newTuplesCount = 0;
-      debugger
+      // debugger
 
       do {
         const relevantClauses = clauses.filter(({ key, deps }) => {
@@ -223,13 +229,17 @@ debugger
         });
 
         const newFacts = produceFactsUsingDeductiveRules(relevantClauses, accumulatedFacts);
-        accumulatedFacts = mergeFactsDeep(accumulatedFacts, newFacts) as Facts;
-        newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
-        keysUpdated = [...newFacts.keys()];
-        debugger
+        const accumulatedFacts0 = mergeFactsDeep(accumulatedFacts, newFacts) as Facts;
+        newTuplesCount = countUniqFacts(accumulatedFacts0) - countUniqFacts(accumulatedFacts);
+        accumulatedFacts = accumulatedFacts0;
+        // newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
+        keysUpdated = [...newFacts]
+          .filter(([_key, tuples]) => tuples.length != 0)
+          .map(([key, _tuples]) => key);
+        // debugger
       } while (newTuplesCount > 0);
     });
-debugger
+// debugger
     this.deductedFacts = mergeFactsDeep(this.currentState, accumulatedFacts) as Facts;
   }
 
@@ -240,7 +250,10 @@ debugger
     const { inductive: clauses } = this.program;
     // inductive clauses don't depend on each other and don't have cycles
     // we can compute next state just walking all clauses in one pass
-    return produceFactsUsingDeductiveRules(clauses, this.deductedFacts);
+    // debugger
+    const inductedFacts = produceFactsUsingDeductiveRules(clauses, this.deductedFacts);
+    // debugger
+    return inductedFacts;
   }
 }
 

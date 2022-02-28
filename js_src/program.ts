@@ -10,14 +10,14 @@ const collectExprArgs = (astFacts, exprId) => {
   const keep = (row) => _.isEqual(row[0], exprId);
   const getPairSimpleValue = ([id, index, value]) => [index, value];
   const params = collectListFromFacts(astFacts, {
-    'ast_body_var_arg/4': {
+    'ast_body_var_arg': {
       keep,
       getPair: ([id, index, name, locPrefix]) =>
         [index, { variable: name['symbol'] }]
     },
-    'ast_body_int_arg/3': { keep, getPair: getPairSimpleValue },
-    'ast_body_str_arg/3': { keep, getPair: getPairSimpleValue },
-    'ast_body_sym_arg/3': { keep, getPair: getPairSimpleValue },
+    'ast_body_int_arg': { keep, getPair: getPairSimpleValue },
+    'ast_body_str_arg': { keep, getPair: getPairSimpleValue },
+    'ast_body_sym_arg': { keep, getPair: getPairSimpleValue },
   });
   return params;
 }
@@ -27,12 +27,12 @@ const collectExprArgs = (astFacts, exprId) => {
 const collectBodyFacts = (ast, clauseId) => {
   const items = [];
 
-  (ast.get('ast_body_expr/2') ?? []).forEach(bTuple => {
+  (ast.get('ast_body_expr') ?? []).forEach(bTuple => {
     const [clauseId1, exprId] = bTuple;
     if (clauseId != clauseId1) { return; }
 
     const bodyFact = _.find(
-        (ast.get('ast_body_atom/3') ?? []),
+        (ast.get('ast_body_atom') ?? []),
         (fTuple) => {
           const [exprId2, _name, _n] = fTuple;
           return _.isEqual(exprId, exprId2);
@@ -43,7 +43,8 @@ const collectBodyFacts = (ast, clauseId) => {
     if (name['symbol'] == 'successor') { return; }
 
     const params = collectExprArgs(ast, exprId);
-    const key = `${name['symbol']}/${params.length}`;
+    // const key = `${name['symbol']}/${params.length}`;
+    const key = name['symbol']
 
     const isNegated = (negated['symbol'] == 'true');
     items.push({ key, params, isNegated });
@@ -54,9 +55,9 @@ const collectBodyFacts = (ast, clauseId) => {
 
 const collectBodyConditions = (ast, clauseId) => {
   const items = [];
-  (ast.get('ast_body_binop/2') ?? []).forEach(tuple => {
+  (ast.get('ast_body_binop') ?? []).forEach(tuple => {
     const [exprId, op] = tuple;
-    const doesBelongToClause = ast.get('ast_body_expr/2')
+    const doesBelongToClause = ast.get('ast_body_expr')
       .some(tuple => _.isEqual(tuple, [clauseId, exprId]));
     if (!doesBelongToClause) { return; }
 
@@ -65,10 +66,10 @@ const collectBodyConditions = (ast, clauseId) => {
   });
 
   // successor atom acts as condition
-  (ast.get('ast_body_atom/3') ?? []).forEach(tuple => {
+  (ast.get('ast_body_atom') ?? []).forEach(tuple => {
     const [exprId, name, negated] = tuple;
     if (name['symbol'] !== 'successor') { return; }
-    const doesBelongToClause = ast.get('ast_body_expr/2')
+    const doesBelongToClause = ast.get('ast_body_expr')
       .some(tuple => _.isEqual(tuple, [clauseId, exprId]));
     if (!doesBelongToClause) { return; }
 
@@ -85,7 +86,7 @@ const collectBodyConditions = (ast, clauseId) => {
 
 const prepareClauses = (ast, suffix): Clause[] => {
   const clauses = [];
-  (ast.get('ast_clause/3') ?? []).forEach(cTuple => {
+  (ast.get('ast_clause') ?? []).forEach(cTuple => {
     const [name, clauseId, suffix1] = cTuple;
     // we are interested only in deductive rules
     if (!_.isEqual(suffix1, suffix)) { return; }
@@ -94,14 +95,14 @@ const prepareClauses = (ast, suffix): Clause[] => {
     const getPairSimpleValue = ([id, index, value]) => [index, value];
     // const t0 = performance.now();
     const params = collectListFromFacts(ast, {
-      'ast_clause_var_arg/5': {
+      'ast_clause_var_arg': {
         keep,
         getPair: ([id, index, name, aggFunc, locPrefix]) =>
           [index, { variable: name['symbol'], aggFunc: aggFunc['symbol'] }],
       },
-      'ast_clause_int_arg/3': { keep, getPair: getPairSimpleValue },
-      'ast_clause_str_arg/3': { keep, getPair: getPairSimpleValue },
-      'ast_clause_sym_arg/3': { keep, getPair: getPairSimpleValue },
+      'ast_clause_int_arg': { keep, getPair: getPairSimpleValue },
+      'ast_clause_str_arg': { keep, getPair: getPairSimpleValue },
+      'ast_clause_sym_arg': { keep, getPair: getPairSimpleValue },
     });
     // const t1 = performance.now();
 

@@ -78,15 +78,15 @@ const transformAtom = (tables, item, gensym, filename) => {
   });
 
   return mergeFactsDeep(tables, {
-    'ast_atom_location/3': [
+    'ast_atom_location': [
       [filename, line, atomId]
     ],
-    'ast_atom/3': [
+    'ast_atom': [
       [{symbol: name}, atomId, time]
     ],
-    'ast_atom_int_arg/3': intArgs,
-    'ast_atom_sym_arg/3': symArgs,
-    'ast_atom_str_arg/3': strArgs,
+    'ast_atom_int_arg': intArgs,
+    'ast_atom_sym_arg': symArgs,
+    'ast_atom_str_arg': strArgs,
   });
 };
 
@@ -124,21 +124,21 @@ const transformBodyAtomExpr = (tables, bodyExpr, clauseId, gensym, filename) => 
   });
 
   return mergeFactsDeep(tables, {
-    'ast_body_expr_location/3': [
+    'ast_body_expr_location': [
       [filename, line, exprId]
     ],
-    'ast_body_expr/2': [
+    'ast_body_expr': [
       [clauseId, exprId]
     ],
-    'ast_body_atom/3': [
+    'ast_body_atom': [
       [exprId, argToSymbol(name), boolToSymbol(negated)]
     ],
-    'ast_body_atom_var_time/2': varTime,
-    'ast_body_atom_int_time/2': intTime,
-    'ast_body_var_arg/4': varArgs,
-    'ast_body_int_arg/3': intArgs,
-    'ast_body_sym_arg/3': symArgs,
-    'ast_body_str_arg/3': strArgs,
+    'ast_body_atom_var_time': varTime,
+    'ast_body_atom_int_time': intTime,
+    'ast_body_var_arg': varArgs,
+    'ast_body_int_arg': intArgs,
+    'ast_body_sym_arg': symArgs,
+    'ast_body_str_arg': strArgs,
   });
 };
 
@@ -167,17 +167,17 @@ const transformBinaryPredicateExpr = (tables, bodyExpr, clauseId, gensym, filena
   });
 
   return mergeFactsDeep(tables, {
-    'ast_body_expr_location/3': [
+    'ast_body_expr_location': [
       [filename, line, exprId]
     ],
-    'ast_body_expr/2': [
+    'ast_body_expr': [
       [clauseId, exprId]
     ],
-    'ast_body_binop/2': [
+    'ast_body_binop': [
       [exprId, {symbol: op}]
     ],
-    'ast_body_var_arg/4': varArgs,
-    'ast_body_int_arg/3': intArgs,
+    'ast_body_var_arg': varArgs,
+    'ast_body_int_arg': intArgs,
   });
 };
 
@@ -193,15 +193,15 @@ const transformChooseExpr = (tables, bodyExpr, clauseId, gensym, filename) => {
   const rowVars = rowvars.map(varToTuple);
 
   return mergeFactsDeep(tables, {
-    'ast_body_expr_location/3': [
+    'ast_body_expr_location': [
       [filename, line, exprId]
     ],
-    'ast_body_expr/2': [
+    'ast_body_expr': [
       [clauseId, exprId]
     ],
-    'ast_body_choose/1': [[exprId]],
-    'ast_body_choose_key_var/3': keyVars,
-    'ast_body_choose_row_var/3': rowVars,
+    'ast_body_choose': [[exprId]],
+    'ast_body_choose_key_var': keyVars,
+    'ast_body_choose_row_var': rowVars,
   });
 };
 
@@ -253,16 +253,16 @@ const transformRule = (tables, item, gensym, filename) => {
 
   const suffix1 = {symbol: suffix ?? 'none'};
   return mergeFactsDeep(tables1, {
-    'ast_clause_location/3': [
+    'ast_clause_location': [
       [filename, line, clauseId]
     ],
-    'ast_clause/3': [
+    'ast_clause': [
       [{symbol: name}, clauseId, suffix1]
     ],
-    'ast_clause_var_arg/5': varArgs,
-    'ast_clause_int_arg/3': intArgs,
-    'ast_clause_str_arg/3': strArgs,
-    'ast_clause_sym_arg/3': symArgs,
+    'ast_clause_var_arg': varArgs,
+    'ast_clause_int_arg': intArgs,
+    'ast_clause_str_arg': strArgs,
+    'ast_clause_sym_arg': symArgs,
   });
 };
 
@@ -323,7 +323,7 @@ const sourceFactsFromAstFacts = (astTFacts) => {
   const astFacts = astTFacts.get(AST_TIMESTAMP);
 
   const output = new Map();
-  (astFacts.get('ast_atom/3') ?? [])
+  (astFacts.get('ast_atom') ?? [])
     .forEach(fTuple => {
       const [name, atomId, sourceTimestamp] = fTuple;
 
@@ -333,7 +333,7 @@ const sourceFactsFromAstFacts = (astTFacts) => {
       // now let's find all arguments and insert them into array
       const resultTuple = []; // first element is timestamp
 
-      const argNames = ['ast_atom_sym_arg/3', 'ast_atom_int_arg/3', 'ast_atom_str_arg/3'];
+      const argNames = ['ast_atom_sym_arg', 'ast_atom_int_arg', 'ast_atom_str_arg'];
       argNames.forEach(name => {
         (astFacts.get(name) ?? [])
           .filter(([atomId1, n, val]) => (_.isEqual(atomId1, atomId)))
@@ -352,7 +352,8 @@ const sourceFactsFromAstFacts = (astTFacts) => {
       }
 
       // at this point, we collected all values into resultTuple.
-      const key = `${name.symbol}/${resultTuple.length}`;
+      // const key = `${name.symbol}/${resultTuple.length}`;
+      const key = name.symbol;
       const currentTuples = (facts.get(key) ?? []);
       currentTuples.push(resultTuple);
       facts.set(key, currentTuples);
@@ -367,10 +368,10 @@ const rulesFromAstFacts = (astTFacts) => {
   const astFacts = astTFacts.get(AST_TIMESTAMP);
   const rulesFacts = new Map([...astFacts].filter(([key, _tuples]) => {
     switch (key) {
-      case 'ast_atom/3':
-      case 'ast_atom_sym_arg/3':
-      case 'ast_atom_int_arg/3':
-      case 'ast_atom_str_arg/3':
+      case 'ast_atom':
+      case 'ast_atom_sym_arg':
+      case 'ast_atom_int_arg':
+      case 'ast_atom_str_arg':
         return false;
       default:
         return true;
@@ -391,7 +392,7 @@ const extractMetadata = (astTFacts0) => {
   const astFacts = new Map(
     [...astTFacts0.get(AST_TIMESTAMP)].map(([key, tuples]) => {
       switch (key) {
-        case 'ast_atom/3':
+        case 'ast_atom':
           {
             const filteredTuples = tuples.filter(
               ([name, id, timestamp]) => 
@@ -399,7 +400,7 @@ const extractMetadata = (astTFacts0) => {
             return [key, filteredTuples];
           }
             
-        case 'ast_clause/3':
+        case 'ast_clause':
           {
             const filteredTuples = tuples.filter(
               ([name, id, suffix]) => 
@@ -418,14 +419,14 @@ const extractMetadata = (astTFacts0) => {
   const META_INFO_TIMESTAMP = 0;
   const facts = sourceFactsFromAstFacts(astTFacts0).get(META_INFO_TIMESTAMP) ?? (new Map());
 
-  if (facts.get('$meta stratum/2')) {
+  if (facts.get('$meta stratum')) {
     const vertices0 = _.groupBy(
-      (facts.get('$meta stratum/2') ?? []).map(([s, r]) => [s['symbol'], r['symbol']]),
+      (facts.get('$meta stratum') ?? []).map(([s, r]) => [s['symbol'], r['symbol']]),
       ([stratum, rule]) => stratum);
     const vertices = _.mapValues(
       vertices0,
       (items) => items.map(([st, rule]) => rule));
-    const edges = (facts.get('$meta stratum_dependency/2') ?? [])
+    const edges = (facts.get('$meta stratum_dependency') ?? [])
       .map(([s1, s2]) => [s1['symbol'], s2['symbol']]);
     explicitStrata = { vertices, edges };
   }

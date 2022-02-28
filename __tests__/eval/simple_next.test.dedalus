@@ -12,6 +12,8 @@ position(2)@10;
 point(P) :- path(P, _);
 point(P) :- path(_, P);
 
+point_with_next(P) :- path(P, _);
+
 % just keep paths as is
 path(A, B)@next :- path(A, B);
 
@@ -19,8 +21,7 @@ position(P)@next :-
   % keep the old position
   % if next point doesn't exist
   position(P),
-  point(P1),
-  notin path(P, P1);
+  notin point_with_next(P);
 position(P)@next :-
   position(P1),
   path(P1, P);
