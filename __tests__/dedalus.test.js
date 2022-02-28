@@ -69,7 +69,7 @@ const testcases = await findTestcases({
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    // '__tests__/validator/incorrect_use_of_successor.test.dedalus',
+    '__tests__/validator/inconsistent_number_of_fields.test.dedalus',
   ],
 });
 
@@ -87,13 +87,14 @@ describe("validator", () => {
     const matcherPath = path.join(__dirname, `./validator/${name}.test.dedalus`);
   
     const inputText = await fs.readFile(inputPath);
-    const validationFacts = await validateFile(inputText, `./validator/${name}.in.dedalus`);
+    const validationTFacts = await validateFile(inputText, `./validator/${name}.in.dedalus`);
+    const validationFacts = validationTFacts.get(-100); // TODO: get rid of AST_TIMESTAMP
   
     // now when we got results of validation,
     // we need to supply them as facts and run the matcher code
   
     const matcherText = await fs.readFile(matcherPath);
-    await runDedalusTest(validationFacts, matcherText, `./validator/${name}.test.dedalus`, { inputHasAST: true });
+    await runDedalusTest2(validationFacts, matcherText, `./validator/${name}.test.dedalus`, { inputHasAST: true, noInduction: true });
   });
 });
 
@@ -110,13 +111,14 @@ describe('parser', () => {
     const matcherPath = path.join(__dirname, `./parser/${name}.test.dedalus`);
   
     const inputText = await fs.readFile(inputPath);
-    const astFacts = await parseDedalus(inputText, `./parser/${name}.in.dedalus`);
+    const astTFacts = await parseDedalus(inputText, `./parser/${name}.in.dedalus`);
+    const astFacts = astTFacts.get(-100); // TODO: get rid of AST_TIMESTAMP
   
     // now when we got results of validation,
     // we need to supply them as facts and run the matcher code
   
     const matcherText = await fs.readFile(matcherPath);
-    await runDedalusTest(astFacts, matcherText, `./parser/${name}.test.dedalus`, { inputHasAST: true });
+    await runDedalusTest2(astFacts, matcherText, `./parser/${name}.test.dedalus`, { inputHasAST: true, noInduction: true });
   });
 });
 
@@ -133,7 +135,7 @@ describe('eval', () => {
     const matcherText = await fs.readFile(matcherPath);
 
     const inputFacts = (new Map([]));
-    await runDedalusTest(inputFacts, matcherText, `./eval/${name}.test.dedalus`);
+    await runDedalusTest2(inputFacts, matcherText, `./eval/${name}.test.dedalus`);
   });
 });
 
@@ -173,7 +175,7 @@ const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) =
 
 // version that uses Runtime interface
 const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) => {
-  const { inputHasAST } = opts;
+  const { inputHasAST, noInduction } = opts;
 
   const { strata, astClauses, initialTFacts: initialTFacts0, factsKeys } =
     await processAST(await parseDedalus(matcherText, matcherPath));
@@ -196,24 +198,27 @@ const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) 
   while (true) {
     const testPassedFacts = await rt.query(testPassedKeys);
     const testFailedFacts = await rt.query(testFailedKeys);
-    const hasAtLeastOnePass = (0 !== testPassedFacts.size());
-    const hasAtLeastOneFailure = (0 !== testFailedFacts.size());
+    const hasAtLeastOnePass = (0 !== testPassedFacts.size);
+    const hasAtLeastOneFailure = (0 !== testFailedFacts.size);
 
     const fixpointReached = await rt.isFixpointReached();
     testPassed = hasAtLeastOnePass && !hasAtLeastOneFailure;
     testFailed = hasAtLeastOneFailure || (!hasAtLeastOnePass && fixpointReached);
 
-    if (testFailed || testPassed) { break; }
+    if (noInduction || testFailed || testPassed) { break; }
 
     await rt.tick();
   }
 
-  if (testFailed) {
-    console.log(prettyPrintFacts(matchingTFacts));
+  if (testFailed || (!testPassed && noInduction)) {
+    const allDeductedFacts = await rt.query(factsKeys);
+    const currentTimestamp = rt.getCurrentTimestamp();
+    const allDeductedTFacts = new Map([[currentTimestamp, allDeductedFacts]]);
+    console.log(prettyPrintFacts(allDeductedTFacts));
     if (inputHasAST) {
-      console.log(prettyPrintAST(matchingFacts))
+      console.log(prettyPrintAST(allDeductedTFacts))
     }
+    debugger
+    throw new Error('Test failed');
   }
-
-  expect(testFailed).toEqual(false);
 };

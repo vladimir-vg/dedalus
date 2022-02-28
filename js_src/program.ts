@@ -105,7 +105,7 @@ const prepareClauses = (ast, suffix): Clause[] => {
     });
     // const t1 = performance.now();
 
-    const key = `${name['symbol']}/${params.length}`;
+    const key = name['symbol']; // `${name['symbol']}/${params.length}`;
 
     // const t2 = performance.now();
     const bodyFacts = collectBodyFacts(ast, clauseId);
@@ -115,7 +115,7 @@ const prepareClauses = (ast, suffix): Clause[] => {
 
     // console.log(name['symbol'], { collect: t1-t0, bodyFacts: t3-t2, bodyConditions: t4-t3 });
 
-    const deps = bodyFacts.map(({ key }) => key);
+    const deps = bodyFacts.map(({ key }) => key.split('/')[0]);
 
     clauses.push({ key, params, bodyFacts, bodyConditions, deps });
   });

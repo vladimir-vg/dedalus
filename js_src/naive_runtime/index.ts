@@ -10,7 +10,7 @@ import { Table } from './table';
 
 const factsSubset = (keys: string[], facts: Facts): Facts => {
   return (new Map([...facts].filter(([key, _tuples]) => {
-    return (key.split('/')[0] in keys);
+    return keys.includes(key.split('/')[0]);
   })));
 };
 
@@ -19,8 +19,9 @@ const factsSubset = (keys: string[], facts: Facts): Facts => {
 const produceFactsUsingDeductiveRules = (clauses: Clause[], facts: Facts): Facts => {
   // Just walk all inductive rules (not @async and not @next)
   // one by one and produce all possible new facts from given facts
-
+  debugger
   return clauses.reduce((newFacts, clause) => {
+    debugger
     const { key, params, bodyFacts, bodyConditions } = clause;
     const positiveBodyFacts = bodyFacts.filter(({ isNegated }) => !isNegated);
     // const positiveBodyFacts = _.sortBy(positiveBodyFacts0, ({ key }) => (facts.get(key) ?? []).length);
@@ -69,6 +70,14 @@ const getStratumComputationOrder = ({ vertices, edges }: Strata): string[] => {
 
 
 
+const countUniqFacts = (facts: Facts): number => {
+  return [... facts.values()]
+    .map(tuples => tuples.length)
+    .reduce((a, b) => a+b, 0);
+}
+
+
+
 class NaiveRuntime implements Runtime {
   program: Program;
   initialTFacts: TFacts;
@@ -81,6 +90,7 @@ class NaiveRuntime implements Runtime {
   // produced using @next rule on previous tick
   // or were given in the source as initial facts
   currentState: Facts;
+  prevState: Facts | null;
 
   // if present, contains all facts that were deducted
   // from current state
@@ -100,7 +110,7 @@ class NaiveRuntime implements Runtime {
     }
     this.currentState = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
     this.deductedFacts = null;
-
+debugger
     this.tillFixpointPromise = null;
   }
 
@@ -131,7 +141,13 @@ class NaiveRuntime implements Runtime {
     if (!!this.tillFixpointPromise) {
       throw new Error('Till fixpoint computation is ongoing');
     }
-    throw new Error('Not implemented');
+
+    const facts = this._inductFacts();
+    this.prevState = this.currentState;
+    this.currentTimestamp += 1;
+    const initialFacts = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
+    this.currentState = mergeFactsDeep(facts, initialFacts) as Facts;
+    return Promise.resolve();
   }
   
   tickTillStateFixpoint(): Promise<void> {
@@ -147,8 +163,31 @@ class NaiveRuntime implements Runtime {
     // return this.tillFixpointPromise;
   }
 
+  getCurrentTimestamp(): number {
+    return this.currentTimestamp;
+  }
+
   isFixpointReached(): Promise<boolean> {
-    throw new Error('Not implemented');
+    if (!this.prevState) {
+      // if we haven't even made a single step
+      // then we don't know for sure whether it is reached
+      return Promise.resolve(false);
+    }
+
+    if (!this.isPaused()) {
+      throw new Error('Not implemented');
+    }
+
+    // There must be efficient way to compare whether facts are same
+    // for now we do stupid thing: count number of tuples,
+    // merge facts. If after merge number of tuples stayed the same,
+    // then they muse be same.
+
+    const uniqFactsCount1 = countUniqFacts(this.currentState);
+    const uniqFactsCount2 = countUniqFacts(this.prevState);
+    const uniqFactsCount3 = countUniqFacts(mergeFactsDeep(this.currentState, this.prevState) as Facts);
+    const isFixpoint = (uniqFactsCount1 == uniqFactsCount2) && (uniqFactsCount2 == uniqFactsCount3);
+    return Promise.resolve(isFixpoint);
   }
 
   isPaused(): boolean {
@@ -169,12 +208,13 @@ class NaiveRuntime implements Runtime {
     const stOrder = getStratumComputationOrder(this.strata);
     const { deductive: clauses } = this.program;
 
-    let accumulatedFacts: Facts = new Map();
+    let accumulatedFacts: Facts = this.currentState;
+    let keysUpdated = [... this.currentState.keys()].map(key => key.split('/')[0]);
 
     stOrder.forEach(stratum => {
       let newTuplesCount = 0;
-      let keysUpdated = [... this.currentState.keys()];
-  
+      debugger
+
       do {
         const relevantClauses = clauses.filter(({ key, deps }) => {
           const depsWereUpdated = deps.some(dep => keysUpdated.includes(dep));
@@ -186,10 +226,21 @@ class NaiveRuntime implements Runtime {
         accumulatedFacts = mergeFactsDeep(accumulatedFacts, newFacts) as Facts;
         newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
         keysUpdated = [...newFacts.keys()];
+        debugger
       } while (newTuplesCount > 0);
     });
-
+debugger
     this.deductedFacts = mergeFactsDeep(this.currentState, accumulatedFacts) as Facts;
+  }
+
+  private _inductFacts(): Facts {
+    if (!this.deductedFacts) {
+      this._deductFacts();
+    }
+    const { inductive: clauses } = this.program;
+    // inductive clauses don't depend on each other and don't have cycles
+    // we can compute next state just walking all clauses in one pass
+    return produceFactsUsingDeductiveRules(clauses, this.deductedFacts);
   }
 }
 

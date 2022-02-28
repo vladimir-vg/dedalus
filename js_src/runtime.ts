@@ -93,6 +93,9 @@ interface Runtime {
   // returns promise
   tickTillStateFixpoint(): Promise<void>;
 
+  // returns value only if paused
+  getCurrentTimestamp(): number;
+
   // returns true, if @next rules produce exactly same state as before
   // and input queue is empty.
   //
