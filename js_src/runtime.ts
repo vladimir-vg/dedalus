@@ -23,13 +23,7 @@
 //   String = "string",
 // }
 
-type Tuples = {
-  // for now we don't have information about
-  // fields types, thus store values of all types together
-
-  // types: VType[],
-  rows: any[][],
-}
+type Tuples = any[][];
 type Facts = Map<string, Tuples>;
 type TFacts = Map<number, Facts>;
 

@@ -229,7 +229,7 @@ const aggregateRows = (table, params) => {
     .filter(param => param.variable && !aggregatedColumns.includes(param.variable))
     .map(param => param.variable);
   
-  const groups = {};
+  const groups : {[key: string]: any[][]} = {};
   table.rows.forEach(row => {
     const groupValues = projectRowValues(row, table.columns, keyColumns);
     const key = hash(groupValues);
@@ -262,6 +262,9 @@ const aggregateRows = (table, params) => {
 
 
 class Table {
+  columns: string[];
+  rows: any[][];
+
   // we take certain fact name and map it according to variables
   static fromFacts(facts, key, params) {
     const [_, n] = key.split('/');

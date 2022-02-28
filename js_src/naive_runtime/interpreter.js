@@ -3,7 +3,7 @@ import { performance } from 'perf_hooks';
 import _ from 'lodash';
 
 import { mergeFactsDeep } from '../ast';
-import { Table } from './table.js';
+import { Table } from './table';
 import { ast2program } from '../program';
 
 
