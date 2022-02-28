@@ -56,25 +56,17 @@ type Strata = {
   edges: string[][], // list of pairs
 };
 
-abstract class Runtime {
-  paused: boolean;
-  tillFixpointPromise: Promise<void> | null;
-
-  constructor(program: Program, initialTFacts: TFacts, strata: Strata, options?: any) {
-    this.paused = true;
-    this.tillFixpointPromise = null;
-  }
-
+interface Runtime {
   // register for output messages
   // key specifies which @async predicate callback is waiting for.
   // if key is not specified, then callback will be triggered
   // for all output @async predicates
   //
   // promise is resolved only after listener is active
-  abstract addOutputListener(opts: { key?: string, callback: RuntimeOutputListener }): Promise<void>;
+  addOutputListener(opts: { key?: string, callback: RuntimeOutputListener }): Promise<void>;
 
   // promise is resolved only after listener was removed
-  abstract removeOutputListener(opts: { key?: string, callback: RuntimeOutputListener }): Promise<void>;
+  removeOutputListener(opts: { key?: string, callback: RuntimeOutputListener }): Promise<void>;
 
   // runs a query against current state
   // basically, works as usual Datalog,
@@ -91,42 +83,21 @@ abstract class Runtime {
   // Query returns all entries for given keys.
   // User can add desired queries as part of the source code,
   // and then select their values by specifying their keys
-  abstract query(keys: string[]): Promise<Facts>;
+  query(keys: string[]): Promise<Facts>;
 
   // adds tuples to be received asyncronously, eventually
   // it does not guarantee that all these tuples would be
   // delivered at once. It also does not provide any information
   // when they're delivered
-  abstract enqueueInput(facts: Facts);
+  enqueueInput(facts: Facts);
  
   // makes single timestamp step computation
   // promise is resolved once tick was completed
-  tick(): Promise<void> {
-    if (!!this.tillFixpointPromise) {
-      throw new Error('Till fixpoint computation is ongoing');
-    }
-    return this._tick();
-  }
-
-  abstract _tick(): Promise<void>;
+  tick(): Promise<void>;
 
   // runs ticks over and over, util there is no change in state.
   // returns promise
-  tickTillStateFixpoint(): Promise<void> {
-    // if we already have a promise that waits fixpoint then return just it
-    if (this.tillFixpointPromise) { return this.tillFixpointPromise; }
-  
-    let resolveCallback;
-    this.tillFixpointPromise = new Promise((resolve, reject) => {
-      resolveCallback = resolve;
-    });
-    
-    this._tickTillStateFixpoint(resolveCallback);
-    return this.tillFixpointPromise;
-  }
-
-  // should call resolve() once fixpoint is reached
-  abstract _tickTillStateFixpoint(resolve: () => void): Promise<void>;
+  tickTillStateFixpoint(): Promise<void>;
 
   // returns true, if @next rules produce exactly same state as before
   // and input queue is empty.
@@ -138,25 +109,16 @@ abstract class Runtime {
   //
   // If between isFixpointReached call and result were no enqueueInput calls
   // then positive result can be trusted.
-  abstract isFixpointReached(): Promise<boolean>;
+  isFixpointReached(): Promise<boolean>;
 
-  isPaused(): boolean {
-    return this.paused;
-  }
+  // must return correct status right away
+  isPaused(): boolean;
 
   // if runtime runs ticks over and over till fixpoint
   // then it can be paused using this method.
   // You need to pause computation in order
   // to make consistent queries
-  pause(): Promise<void> {
-    if (this.paused) { return Promise.resolve(); }
-    return this._pause().then(() => {
-      this.paused = true;
-      return;
-    });
-  }
-
-  abstract _pause(): Promise<void>;
+  pause(): Promise<void>;
 };
 
 
