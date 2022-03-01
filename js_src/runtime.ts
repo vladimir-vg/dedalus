@@ -108,14 +108,14 @@ interface Runtime {
   // then positive result can be trusted.
   isFixpointReached(): Promise<boolean>;
 
-  // // must return correct status right away
-  // isPaused(): boolean;
+  // must return correct status right away
+  isPaused(): boolean;
 
-  // // if runtime runs ticks over and over till fixpoint
-  // // then it can be paused using this method.
-  // // You need to pause computation in order
-  // // to make consistent queries
-  // pause(): Promise<void>;
+  // if runtime runs ticks over and over till fixpoint
+  // then it can be paused using this method.
+  // You need to pause computation in order
+  // to make consistent queries
+  pause(): Promise<void>;
 };
 
 

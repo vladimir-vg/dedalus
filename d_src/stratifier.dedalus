@@ -11,24 +11,31 @@
 '$meta stratum'(a, ast_clause_var_arg)@0;
 '$meta stratum'(a, ast_body_var_arg)@0;
 
-% '$meta stratum'(a, symbol)@0;
-% '$meta stratum'(a, initial_fact)@0;
-% '$meta stratum'(a, negated_dependency)@0;
-% '$meta stratum'(a, aggregated_dependency)@0;
-% '$meta stratum'(a, body_atom_uses_var)@0;
-% '$meta stratum'(a, aggregated_clause_var)@0;
+'$meta stratum'(a, stratum)@0;
+'$meta stratum'(a, stratum_dependency)@0;
+'$meta stratum'(a, already_used_symbol)@0;
+'$meta stratum'(a, already_assigned)@0;
+'$meta stratum'(a, symbol)@0;
+'$meta stratum'(a, initial_fact)@0;
+'$meta stratum'(a, negated_dependency)@0;
+'$meta stratum'(a, aggregated_dependency)@0;
+'$meta stratum'(a, body_atom_uses_var)@0;
+'$meta stratum'(a, aggregated_clause_var)@0;
 
-% '$meta stratum'(b, path)@0;
-% '$meta stratum'(b, cycle)@0;
-% '$meta stratum'(b, vertex)@0;
-% '$meta stratum'(b, dependency)@0;
+'$meta stratum'(b, dependency)@0;
+'$meta stratum'(b, next_available_symbol)@0;
 
-% '$meta stratum'(c, leaf)@0;
-% '$meta stratum'(c, stratum_option)@0;
+'$meta stratum'(c, path)@0;
+'$meta stratum'(c, cycle)@0;
+'$meta stratum'(c, same_cycle)@0;
+'$meta stratum'(c, leaf)@0;
+'$meta stratum'(c, vertex)@0;
 
-% '$meta stratum'(d, stratum_number)@0;
-% '$meta stratum'(d, stratum)@0;
-% '$meta stratum'(d, stratum_dependency)@0;
+'$meta stratum'(d, has_bad_dependency)@0;
+'$meta stratum'(d, has_bad_dependencies)@0;
+'$meta stratum'(d, has_bad_external_dependencies_in_cycle)@0;
+
+'$meta stratum'(e, selected)@0;
 
 % $meta stratum_dependency forms a DAG, no cycles allowed.
 % Each stratum contains set of rules, which are vertices in rule dependency graph.
@@ -41,16 +48,26 @@
 % Better to keep things unordered as long as it is possible,
 % to keep opportunities for optimization open.
 
-% '$meta stratum_dependency'(b, a)@0;
-% '$meta stratum_dependency'(c, b)@0;
-% '$meta stratum_dependency'(d, c)@0;
-% '$meta stratum_dependency'(d, a)@0;
+'$meta stratum_dependency'(b, a)@0;
+'$meta stratum_dependency'(c, b)@0;
+'$meta stratum_dependency'(d, c)@0;
+'$meta stratum_dependency'(e, d)@0;
 
 
 
-% Okay, so I need to write stratification code in Dedalus
-% using negation and successor and then stratify it by hand.
-
+% presist ast facts, we need them till very end
+ast_clause(Name, ClauseId, Suffix)@next :-
+  ast_clause(Name, ClauseId, Suffix);
+ast_body_expr(ClauseId, ExprId)@next :-
+  ast_body_expr(ClauseId, ExprId);
+ast_body_atom(ExprId, Name, Negated)@next :-
+  ast_body_atom(ExprId, Name, Negated);
+ast_atom(Name, AtomId, Timestamp)@next :-
+  ast_atom(Name, AtomId, Timestamp);
+ast_clause_var_arg(ClauseId, ArgN, VarName, AggFunc, LocPrefix)@next :-
+  ast_clause_var_arg(ClauseId, ArgN, VarName, AggFunc, LocPrefix);
+ast_body_var_arg(ExprId, ArgN, VarName, LocPrefix)@next :-
+  ast_body_var_arg(ExprId, ArgN, VarName, LocPrefix);
 
 % Algorithm:
 % 1) find all leaf dependencies
@@ -158,10 +175,12 @@ selected(Name) :-
   % if no bad dependency, and at least one already marked
   % then propagate further
   vertex(Name),
+  notin already_assigned(Name),
   notin cycle(Name),
   notin has_bad_dependencies(Name);
 selected(Name) :-
   cycle(Name),
+  notin already_assigned(Name),
   notin has_bad_external_dependencies_in_cycle(Name);
 
 
@@ -212,6 +231,9 @@ symbol(Symbol) :- nsym(_, Symbol);
 
 already_used_symbol(Symbol) :-
   stratum(_Name, Symbol);
+
+
+nsym(A, B)@next :- nsym(A, B);
 
 % successor-like relation, next symbol
 first_symbol(a)@1;

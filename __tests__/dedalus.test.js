@@ -5,7 +5,7 @@ import glob from 'glob-promise';
 
 import _ from 'lodash';
 
-import { validateFile, parseDedalus } from '../js_src/index.js';
+import { validateFile, parseDedalus, stratifyFile } from '../js_src/index.js';
 import { prettyPrintFacts, prettyPrintAST, processAST } from '../js_src/index.js';
 
 import { NaiveRuntime } from '../js_src/naive_runtime/index.ts';
@@ -72,6 +72,7 @@ const testcases = await findTestcases({
     // '__tests__/eval/explicitly_stratified_negation.test.dedalus',
     // '__tests__/parser/various.test.dedalus',
     // '__tests__/validator/negated_not_in_positive.test.dedalus',
+    '__tests__/stratifier/negation.test.dedalus',
   ],
 });
 
@@ -119,6 +120,30 @@ describe('parser', () => {
   
     const matcherText = await fs.readFile(matcherPath);
     await runDedalusTest(astFacts, matcherText, `./parser/${name}.test.dedalus`, { inputHasAST: true, noInduction: true });
+  });
+});
+
+
+
+describe("stratifier", () => {
+  // just to report that there are skipped tests
+  if (testcases.stratifier.toSkip.length != 0) {
+    test.skip.each(testcases.stratifier.toSkip)('%s', async (name) => null);
+  }
+
+  if (testcases.stratifier.toRun.length == 0) { return; }
+  test.each(testcases.stratifier.toRun)('%s', async (name) => {
+    const inputPath = path.join(__dirname, `./stratifier/${name}.in.dedalus`);
+    const matcherPath = path.join(__dirname, `./stratifier/${name}.test.dedalus`);
+  
+    const inputText = await fs.readFile(inputPath);
+    const stratificationFacts = await stratifyFile(inputText, `./stratifier/${name}.in.dedalus`);
+  
+    // now when we got results of validation,
+    // we need to supply them as facts and run the matcher code
+  
+    const matcherText = await fs.readFile(matcherPath);
+    await runDedalusTest(stratificationFacts, matcherText, `./stratifier/${name}.test.dedalus`, { noInduction: true });
   });
 });
 

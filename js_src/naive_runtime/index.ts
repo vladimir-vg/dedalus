@@ -96,7 +96,7 @@ class NaiveRuntime implements Runtime {
   // from current state
   deductedFacts: Facts | null;
   tillFixpointPromise: Promise<void> | null;
-  fixpointResolveCallback: () => void | null;
+  // fixpointResolveCallback: () => void | null;
 
   constructor(program: Program, initialTFacts: TFacts, strata: Strata, options?: any) {
     this.program = program;
@@ -113,7 +113,7 @@ class NaiveRuntime implements Runtime {
     this.deductedFacts = null;
 // debugger
     this.tillFixpointPromise = null;
-    this.fixpointResolveCallback = null;
+    // this.fixpointResolveCallback = null;
   }
 
   addOutputListener(opts: { key?: string, callback: RuntimeOutputListener }): Promise<void> {
@@ -145,29 +145,26 @@ class NaiveRuntime implements Runtime {
     if (!!this.tillFixpointPromise) {
       throw new Error('Till fixpoint computation is ongoing');
     }
-
-    const facts = this._inductFacts();
-    this.prevState = this.currentState;
-    this.currentTimestamp += 1;
-    const initialFacts = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
-    this.currentState = mergeFactsDeep(facts, initialFacts) as Facts;
-
-    // this we moved to next timestamp and updated state
-    // we need to clear cached deductedFacts
-    this.deductedFacts = null;
-    return Promise.resolve();
+    return this._loopTick();
   }
   
   tickTillStateFixpoint(): Promise<void> {
     // if we already have a promise that waits fixpoint then return just it
     if (this.tillFixpointPromise) { return this.tillFixpointPromise; }
-  
-    this.tillFixpointPromise = new Promise((resolve, reject) => {
-      this.fixpointResolveCallback = resolve;
-    });
-    
-    throw new Error('Not implemented');
-    // return this.tillFixpointPromise;
+
+    const iter = (resolve, reject) => {
+      this.isFixpointReached().then(isReached => {
+        if (isReached) {
+          resolve();
+          this.tillFixpointPromise = null;
+          return;
+        }
+        this._loopTick().then(() => iter(resolve, reject));
+      })
+    }
+
+    this.tillFixpointPromise = new Promise(iter);
+    return this.tillFixpointPromise;
   }
 
   getCurrentTimestamp(): number {
@@ -197,16 +194,18 @@ class NaiveRuntime implements Runtime {
     return Promise.resolve(isFixpoint);
   }
 
-  // isPaused(): boolean {
-  //   // if promise is present, then ticking in the loop
-  //   return this.paused;
-  // }
+  isPaused(): boolean {
+    throw new Error('Not implemented');
 
-  // pause(): Promise<void> {
-  //   if (this.paused) { return Promise.resolve(); }
+    // if promise is present, then ticking in the loop
+    // return this.paused;
+  }
 
-  //   throw new Error('Not implemented');
-  // }
+  pause(): Promise<void> {
+    // if (this.paused) { return Promise.resolve(); }
+
+    throw new Error('Not implemented');
+  }
 
   ///
   ///
@@ -256,6 +255,20 @@ class NaiveRuntime implements Runtime {
     const inductedFacts = produceFactsUsingDeductiveRules(clauses, this.deductedFacts);
     // debugger
     return inductedFacts;
+  }
+
+  private _loopTick(): Promise<void> {
+    const facts = this._inductFacts();
+    this.prevState = this.currentState;
+    this.currentTimestamp += 1;
+    const initialFacts = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
+    debugger
+    this.currentState = mergeFactsDeep(facts, initialFacts) as Facts;
+
+    // this we moved to next timestamp and updated state
+    // we need to clear cached deductedFacts
+    this.deductedFacts = null;
+    return Promise.resolve();
   }
 }
 
