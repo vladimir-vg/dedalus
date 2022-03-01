@@ -69,8 +69,9 @@ const testcases = await findTestcases({
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    // '__tests__/eval/simple_next.test.dedalus',
+    // '__tests__/eval/explicitly_stratified_negation.test.dedalus',
     // '__tests__/parser/various.test.dedalus',
+    // '__tests__/validator/negated_not_in_positive.test.dedalus',
   ],
 });
 
@@ -88,8 +89,8 @@ describe("validator", () => {
     const matcherPath = path.join(__dirname, `./validator/${name}.test.dedalus`);
   
     const inputText = await fs.readFile(inputPath);
-    const validationTFacts = await validateFile(inputText, `./validator/${name}.in.dedalus`);
-    const validationFacts = validationTFacts.get(-100); // TODO: get rid of AST_TIMESTAMP
+    const validationFacts = await validateFile(inputText, `./validator/${name}.in.dedalus`);
+    // const validationFacts = validationTFacts.get(-100); // TODO: get rid of AST_TIMESTAMP
   
     // now when we got results of validation,
     // we need to supply them as facts and run the matcher code
@@ -213,7 +214,7 @@ const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) 
     testPassed = hasAtLeastOnePass && !hasAtLeastOneFailure;
     // testFailed = hasAtLeastOneFailure || (!hasAtLeastOnePass && fixpointReached);
     testFailed = fixpointReached && !testPassed; // hasAtLeastOneFailure || (!hasAtLeastOnePass && fixpointReached);
-
+// debugger
     if (noInduction) { break; }
 
     if (testFailed || testPassed) { debugger; break; }
@@ -230,7 +231,7 @@ const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) 
     if (inputHasAST) {
       console.log(prettyPrintAST(allDeductedTFacts))
     }
-    debugger
+    // debugger
     throw new Error('Test failed');
   }
 };

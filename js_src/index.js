@@ -2,15 +2,17 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs/promises';
 import peg from 'peggy';
+import _ from 'lodash';
 
 import {
   sourceFactsFromAstFacts, tree2facts, rulesFromAstFacts, mergeTFactsDeep,
   extractMetadata,
 } from './ast';
 import { prettyPrintFacts, prettyPrintAST } from './prettyprint.js';
+import { ast2program } from './program';
 
 import { Interpreter } from './naive_runtime/interpreter.js';
-import _ from 'lodash';
+import { NaiveRuntime } from './naive_runtime/index';
 
 
 // current runtime is terribly slow,
@@ -125,10 +127,16 @@ const runDeductively = async (inputFacts, dedalusText, path, opts = {}) => {
 
 
 const validateFile = async (sourceDedalusText, path) => {
-  const sourceAst = await parseDedalus(sourceDedalusText, path);
+  const inputAstTFacts = await parseDedalus(sourceDedalusText, path);
   const validatorDedalusText = await fs.readFile(validatorPath);
+  const { strata, astClauses, factsKeys } =
+    await processAST(await parseDedalus(validatorDedalusText, validatorPath));
+  // just ignore validator initial facts, no need to merge
+  const program = ast2program(astClauses);
+  const rt = new NaiveRuntime(program, inputAstTFacts, strata);
+  return await rt.query(factsKeys);
 
-  return await runDeductively(sourceAst, validatorDedalusText, validatorPath, { skipValidation: true });
+  // return await runDeductively(sourceAst, validatorDedalusText, validatorPath, { skipValidation: true });
 };
 
 

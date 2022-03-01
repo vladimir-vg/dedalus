@@ -131,7 +131,7 @@ class NaiveRuntime implements Runtime {
     }
 
     const result = factsSubset(keys, this.deductedFacts);
-    debugger
+    // debugger
     return Promise.resolve(result);
   }
   
@@ -215,12 +215,12 @@ class NaiveRuntime implements Runtime {
     const { deductive: clauses } = this.program;
 
     let accumulatedFacts: Facts = this.currentState;
-    let keysUpdated = [... this.currentState.keys()];
-
+    
     stOrder.forEach(stratum => {
       let newTuplesCount = 0;
       // debugger
-
+      let keysUpdated = [... accumulatedFacts.keys()];
+      
       do {
         const relevantClauses = clauses.filter(({ key, deps }) => {
           const depsWereUpdated = deps.some(dep => keysUpdated.includes(dep));
