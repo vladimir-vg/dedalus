@@ -61,8 +61,8 @@ const findTestcases = async ({ blacklist, only }) => {
 const testcases = await findTestcases({
   blacklist: [
     // temporarly disabled tests, that require automatic stratification:
-    '__tests__/eval/negation.test.dedalus',
-    '__tests__/eval/var_ignored_in_negation.test.dedalus',
+    // '__tests__/eval/negation.test.dedalus',
+    // '__tests__/eval/var_ignored_in_negation.test.dedalus',
   ],
   only: [
     // if we want to run only particular tests (e.g. for debugging)
@@ -72,7 +72,7 @@ const testcases = await findTestcases({
     // '__tests__/eval/explicitly_stratified_negation.test.dedalus',
     // '__tests__/parser/various.test.dedalus',
     // '__tests__/validator/negated_not_in_positive.test.dedalus',
-    '__tests__/stratifier/negation.test.dedalus',
+    // '__tests__/stratifier/negation.test.dedalus',
   ],
 });
 

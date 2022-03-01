@@ -56,6 +56,7 @@ const stratifyFile0 = async (inputAstFacts) => {
 
   const program = ast2program(astFacts);
   const rt = new NaiveRuntime(program, inputTFacts, strata);
+  // debugger
   await rt.tickTillStateFixpoint();
   // debugger
   return await rt.query(['stratum', 'stratum_dependency']);

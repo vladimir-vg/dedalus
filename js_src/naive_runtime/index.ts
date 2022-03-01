@@ -59,7 +59,7 @@ const getStratumComputationOrder = ({ vertices, edges }: Strata): string[] => {
     const index = _.findIndex(leftoverStrata, (stratum) => {
       return !edges0.some(([parent, child]) => parent == stratum);
     });
-    debugger
+    // debugger
     const stratum = leftoverStrata[index];
     result.push(stratum);
     leftoverStrata.splice(index, 1);
@@ -267,7 +267,7 @@ class NaiveRuntime implements Runtime {
     this.prevState = this.currentState;
     this.currentTimestamp += 1;
     const initialFacts = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
-    // debugger
+    debugger
     this.currentState = mergeFactsDeep(facts, initialFacts) as Facts;
 
     // this we moved to next timestamp and updated state
