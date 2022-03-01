@@ -16,7 +16,7 @@ const factsSubset = (keys: string[], facts: Facts): Facts => {
 
 
 
-const produceFactsUsingDeductiveRules = (clauses: Clause[], facts: Facts): Facts => {
+const produceFacts = (clauses: Clause[], facts: Facts): Facts => {
   // Just walk all inductive rules (not @async and not @next)
   // one by one and produce all possible new facts from given facts
   // debugger
@@ -232,7 +232,7 @@ class NaiveRuntime implements Runtime {
           return inCurrentStratum && depsWereUpdated;
         });
 
-        const newFacts = produceFactsUsingDeductiveRules(relevantClauses, accumulatedFacts);
+        const newFacts = produceFacts(relevantClauses, accumulatedFacts);
         const accumulatedFacts0 = mergeFactsDeep(accumulatedFacts, newFacts) as Facts;
         newTuplesCount = countUniqFacts(accumulatedFacts0) - countUniqFacts(accumulatedFacts);
         accumulatedFacts = accumulatedFacts0;
@@ -255,7 +255,7 @@ class NaiveRuntime implements Runtime {
     // inductive clauses don't depend on each other and don't have cycles
     // we can compute next state just walking all clauses in one pass
     // debugger
-    const inductedFacts = produceFactsUsingDeductiveRules(clauses, this.deductedFacts);
+    const inductedFacts = produceFacts(clauses, this.deductedFacts);
     // stupid way to remove duplicates
     // TODO: replace with something more efficient
     const inductedFactsWithoutDuplicates = mergeFactsDeep(inductedFacts, inductedFacts) as Facts;

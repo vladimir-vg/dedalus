@@ -69,10 +69,7 @@ const testcases = await findTestcases({
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    // '__tests__/eval/explicitly_stratified_negation.test.dedalus',
-    // '__tests__/parser/various.test.dedalus',
-    // '__tests__/validator/negated_not_in_positive.test.dedalus',
-    // '__tests__/stratifier/negation.test.dedalus',
+    // '__tests__/eval/var_ignored_in_negation.test.dedalus',
   ],
 });
 
@@ -96,7 +93,7 @@ describe("validator", () => {
     // we need to supply them as facts and run the matcher code
   
     const matcherText = await fs.readFile(matcherPath);
-    await runDedalusTest(validationFacts, matcherText, `./validator/${name}.test.dedalus`, { inputHasAST: true, noInduction: true });
+    await runDedalusTest(validationFacts, matcherText, `./validator/${name}.test.dedalus`, { inputHasAST: true, noInduction: true, skipValidation: true });
   });
 });
 
@@ -175,7 +172,20 @@ const countUniqFacts = (facts) => {
 
 // version that uses Runtime interface
 const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) => {
-  const { inputHasAST, noInduction } = opts;
+  const { inputHasAST, noInduction, skipValidation } = opts;
+
+  if (!skipValidation) {
+    const validationFacts = await validateFile(matcherText, matcherPath);
+    const validationTFacts = new Map([[0, validationFacts]]);
+    if ((validationFacts.get('invalid_ast') ?? []).length !== 0) {
+      console.log(`invalid AST for ${matcherPath}:\n` + prettyPrintFacts(validationTFacts));
+      if (inputHasAST) {
+        console.log(prettyPrintAST(validationTFacts));
+      }
+      throw new Error('Invalid AST in test code');
+    }
+  }
+
 
   const { strata, astFacts, initialTFacts: initialTFacts0, factsKeys } =
     await processAST(await parseDedalus(matcherText, matcherPath));
