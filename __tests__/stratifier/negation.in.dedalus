@@ -18,3 +18,5 @@ reachable(X,Y) :-
   link(X,Z),
   reachable(Z,Y);
 
+unreachable_node(X) :- unreachable(X, _);
+unreachable_node(Y) :- unreachable(_, Y);

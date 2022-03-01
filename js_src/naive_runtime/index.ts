@@ -59,6 +59,7 @@ const getStratumComputationOrder = ({ vertices, edges }: Strata): string[] => {
     const index = _.findIndex(leftoverStrata, (stratum) => {
       return !edges0.some(([parent, child]) => parent == stratum);
     });
+    debugger
     const stratum = leftoverStrata[index];
     result.push(stratum);
     leftoverStrata.splice(index, 1);
@@ -190,6 +191,7 @@ class NaiveRuntime implements Runtime {
     const uniqFactsCount1 = countUniqFacts(this.currentState);
     const uniqFactsCount2 = countUniqFacts(this.prevState);
     const uniqFactsCount3 = countUniqFacts(mergeFactsDeep(this.currentState, this.prevState) as Facts);
+    // debugger
     const isFixpoint = (uniqFactsCount1 == uniqFactsCount2) && (uniqFactsCount2 == uniqFactsCount3);
     return Promise.resolve(isFixpoint);
   }
@@ -225,6 +227,7 @@ class NaiveRuntime implements Runtime {
       do {
         const relevantClauses = clauses.filter(({ key, deps }) => {
           const depsWereUpdated = deps.some(dep => keysUpdated.includes(dep));
+          if (!this.strata.vertices[stratum]) debugger
           const inCurrentStratum = this.strata.vertices[stratum].includes(key);
           return inCurrentStratum && depsWereUpdated;
         });
@@ -253,8 +256,10 @@ class NaiveRuntime implements Runtime {
     // we can compute next state just walking all clauses in one pass
     // debugger
     const inductedFacts = produceFactsUsingDeductiveRules(clauses, this.deductedFacts);
-    // debugger
-    return inductedFacts;
+    // stupid way to remove duplicates
+    // TODO: replace with something more efficient
+    const inductedFactsWithoutDuplicates = mergeFactsDeep(inductedFacts, inductedFacts) as Facts;
+    return inductedFactsWithoutDuplicates;
   }
 
   private _loopTick(): Promise<void> {
@@ -262,7 +267,7 @@ class NaiveRuntime implements Runtime {
     this.prevState = this.currentState;
     this.currentTimestamp += 1;
     const initialFacts = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
-    debugger
+    // debugger
     this.currentState = mergeFactsDeep(facts, initialFacts) as Facts;
 
     // this we moved to next timestamp and updated state

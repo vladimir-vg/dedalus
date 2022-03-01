@@ -57,13 +57,14 @@ const stratifyFile0 = async (inputAstFacts) => {
   const program = ast2program(astFacts);
   const rt = new NaiveRuntime(program, inputTFacts, strata);
   await rt.tickTillStateFixpoint();
+  // debugger
   return await rt.query(['stratum', 'stratum_dependency']);
 };
 
 
 const computeStrata = async (inputAstFacts) => {
   const facts = await stratifyFile0(inputAstFacts);
-  debugger
+
 
   const vertices0 = _.groupBy(
     (facts.get('stratum') ?? []).map(([s, r]) => [s['symbol'], r['symbol']]),

@@ -141,7 +141,7 @@ describe("stratifier", () => {
   
     // now when we got results of validation,
     // we need to supply them as facts and run the matcher code
-  
+  debugger
     const matcherText = await fs.readFile(matcherPath);
     await runDedalusTest(stratificationFacts, matcherText, `./stratifier/${name}.test.dedalus`, { noInduction: true });
   });
@@ -212,10 +212,11 @@ const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) =
   }
 
   if (testFailed || (!testPassed && noInduction)) {
-    const allDeductedFacts = await rt.query(factsKeys);
+    const queryKeys = [...factsKeys, 'stratum', 'stratum_dependency'];
+    const allDeductedFacts = await rt.query(queryKeys);
     const currentTimestamp = rt.getCurrentTimestamp();
     const allDeductedTFacts = new Map([[currentTimestamp, allDeductedFacts]]);
-
+debugger
     console.log(`for ${matcherPath}:\n` + prettyPrintFacts(allDeductedTFacts));
     if (inputHasAST) {
       console.log(prettyPrintAST(allDeductedTFacts))

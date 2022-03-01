@@ -152,8 +152,8 @@ leaf(A) :-
 % 3) select rules that belongs to cycle and depends on rules that are selected, already have stratum or belongs to cycle
 
 % keep already constructed strata
-stratum(Name, Stratum)@next :- stratum(Name, Stratum);
-stratum(Name, Stratum)@next :-
+stratum(Stratum, Name)@next :- stratum(Stratum, Name);
+stratum(Stratum, Name)@next :-
   selected(Name),
   next_available_symbol(Stratum);
 
@@ -161,15 +161,15 @@ stratum(Name, Stratum)@next :-
 
 stratum_dependency(ParentStratum, ChildStratum)@next :- stratum_dependency(ParentStratum, ChildStratum);
 stratum_dependency(ParentStratum, ChildStratum)@next :-
-  stratum(Parent, ParentStratum),
-  stratum(Child, ChildStratum),
+  stratum(ParentStratum, Parent),
+  stratum(ChildStratum, Child),
   ParentStratum =/= ChildStratum,
   dependency(Parent, Child, _NeedStratumChange);
 
 
 
 already_assigned(Name) :-
-  stratum(Name, _Stratum);
+  stratum(_Stratum, Name);
 
 selected(Name) :-
   % if no bad dependency, and at least one already marked
@@ -230,7 +230,7 @@ symbol(Symbol) :- nsym(Symbol, _);
 symbol(Symbol) :- nsym(_, Symbol);
 
 already_used_symbol(Symbol) :-
-  stratum(_Name, Symbol);
+  stratum(Symbol, _Name);
 
 
 nsym(A, B)@next :- nsym(A, B);
