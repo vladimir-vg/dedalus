@@ -5,7 +5,7 @@ import glob from 'glob-promise';
 
 import _ from 'lodash';
 
-import { validateFile, parseDedalus, runDeductively } from '../js_src/index.js';
+import { validateFile, parseDedalus } from '../js_src/index.js';
 import { prettyPrintFacts, prettyPrintAST, processAST } from '../js_src/index.js';
 
 import { NaiveRuntime } from '../js_src/naive_runtime/index.ts';
@@ -90,13 +90,12 @@ describe("validator", () => {
   
     const inputText = await fs.readFile(inputPath);
     const validationFacts = await validateFile(inputText, `./validator/${name}.in.dedalus`);
-    // const validationFacts = validationTFacts.get(-100); // TODO: get rid of AST_TIMESTAMP
   
     // now when we got results of validation,
     // we need to supply them as facts and run the matcher code
   
     const matcherText = await fs.readFile(matcherPath);
-    await runDedalusTest2(validationFacts, matcherText, `./validator/${name}.test.dedalus`, { inputHasAST: true, noInduction: true });
+    await runDedalusTest(validationFacts, matcherText, `./validator/${name}.test.dedalus`, { inputHasAST: true, noInduction: true });
   });
 });
 
@@ -113,14 +112,13 @@ describe('parser', () => {
     const matcherPath = path.join(__dirname, `./parser/${name}.test.dedalus`);
   
     const inputText = await fs.readFile(inputPath);
-    const astTFacts = await parseDedalus(inputText, `./parser/${name}.in.dedalus`);
-    const astFacts = astTFacts.get(-100); // TODO: get rid of AST_TIMESTAMP
+    const astFacts = await parseDedalus(inputText, `./parser/${name}.in.dedalus`);
   
     // now when we got results of validation,
     // we need to supply them as facts and run the matcher code
   
     const matcherText = await fs.readFile(matcherPath);
-    await runDedalusTest2(astFacts, matcherText, `./parser/${name}.test.dedalus`, { inputHasAST: true, noInduction: true });
+    await runDedalusTest(astFacts, matcherText, `./parser/${name}.test.dedalus`, { inputHasAST: true, noInduction: true });
   });
 });
 
@@ -137,41 +135,9 @@ describe('eval', () => {
     const matcherText = await fs.readFile(matcherPath);
 
     const inputFacts = (new Map([]));
-    await runDedalusTest2(inputFacts, matcherText, `./eval/${name}.test.dedalus`);
+    await runDedalusTest(inputFacts, matcherText, `./eval/${name}.test.dedalus`);
   });
 });
-
-
-
-const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) => {
-  const { inputHasAST } = opts;
-
-  const matchingTFacts = await runDeductively(inputFacts, matcherText, matcherPath);
-  const lastTimestamp = [...matchingTFacts.keys()].reduce((t1, t2) => Math.max(t1,t2));
-  const matchingFacts = matchingTFacts.get(lastTimestamp);
-
-  const testPassedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_passed'));
-  const testFailedKeys = [...matchingFacts.keys()].filter(key => key.startsWith('test_failed'));
-
-  // if we have test_failed, then failed
-  // if we don't have any test_passed, then also failed
-  // otherwise passed
-  const hasAtLeastOneFailure = _.some(testFailedKeys, key => 
-    matchingFacts.get(key).length !== 0);
-  const hasAtLeastOnePass = _.some(testPassedKeys, key => 
-    matchingFacts.get(key).length !== 0);
-  
-  if (hasAtLeastOneFailure || !hasAtLeastOnePass) {
-    console.log(prettyPrintFacts(matchingTFacts));
-
-    if (inputHasAST) {
-      console.log(prettyPrintAST(matchingFacts))
-    }
-  }
-  
-  expect(hasAtLeastOneFailure).toEqual(false);
-  expect(hasAtLeastOnePass).toEqual(true);
-};
 
 
 
@@ -183,13 +149,13 @@ const countUniqFacts = (facts) => {
 
 
 // version that uses Runtime interface
-const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) => {
+const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) => {
   const { inputHasAST, noInduction } = opts;
 
-  const { strata, astClauses, initialTFacts: initialTFacts0, factsKeys } =
+  const { strata, astFacts, initialTFacts: initialTFacts0, factsKeys } =
     await processAST(await parseDedalus(matcherText, matcherPath));
   
-  const program = ast2program(astClauses);
+  const program = ast2program(astFacts);
   let minimalTimestamp = 0;
   if (initialTFacts0.size > 0) {
     minimalTimestamp = [...initialTFacts0.keys()]
@@ -212,9 +178,7 @@ const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) 
 
     const fixpointReached = await rt.isFixpointReached();
     testPassed = hasAtLeastOnePass && !hasAtLeastOneFailure;
-    // testFailed = hasAtLeastOneFailure || (!hasAtLeastOnePass && fixpointReached);
-    testFailed = fixpointReached && !testPassed; // hasAtLeastOneFailure || (!hasAtLeastOnePass && fixpointReached);
-// debugger
+    testFailed = fixpointReached && !testPassed;
     if (noInduction) { break; }
 
     if (testFailed || testPassed) { debugger; break; }
@@ -231,7 +195,6 @@ const runDedalusTest2 = async (inputFacts, matcherText, matcherPath, opts = {}) 
     if (inputHasAST) {
       console.log(prettyPrintAST(allDeductedTFacts))
     }
-    // debugger
     throw new Error('Test failed');
   }
 };

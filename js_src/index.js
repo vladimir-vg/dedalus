@@ -5,22 +5,13 @@ import peg from 'peggy';
 import _ from 'lodash';
 
 import {
-  sourceFactsFromAstFacts, tree2facts, rulesFromAstFacts, mergeTFactsDeep,
-  extractMetadata,
+  sourceFactsFromAstFacts, tree2facts, extractMetadata,
 } from './ast';
 import { prettyPrintFacts, prettyPrintAST } from './prettyprint.js';
 import { ast2program } from './program';
 
-import { Interpreter } from './naive_runtime/interpreter.js';
+// import { Interpreter } from './naive_runtime/interpreter.js';
 import { NaiveRuntime } from './naive_runtime/index';
-
-
-// current runtime is terribly slow,
-// validation makes execution even longer
-// skip it sometimes, when want to iterate
-const SKIP_VALIDATION = false;
-
-
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,7 +25,6 @@ const validatorPath = path.join(__dirname, '..', 'd_src', 'validator.dedalus');
 const parseDedalus = async (dedalusText, filename) => {
   const grammarText = await fs.readFile(grammarPath);
   const dedalusParser = peg.generate(String(grammarText));
-
   const tree = dedalusParser.parse(String(dedalusText));
   const astFacts = tree2facts(tree, filename);
   return astFacts;
@@ -42,7 +32,7 @@ const parseDedalus = async (dedalusText, filename) => {
 
 
 
-const computeStrata = async (sourceAst) => {
+const computeStrata = async (astFacts) => {
   // const stratifierDedalusText = await fs.readFile(stratifierPath);
   // const facts = await runDeductively(sourceAst, stratifierDedalusText, stratifierPath);
 
@@ -59,7 +49,7 @@ const computeStrata = async (sourceAst) => {
 
   // for now must lump everything into one strata.
   // it is correct for programs that limit to deductive rules without negation or aggregation
-  const allAtomNames = [...sourceAst].flatMap(([key, tuples]) => {
+  const allAtomNames = [...astFacts].flatMap(([key, tuples]) => {
     switch (key) {
       case 'ast_atom':
       case 'ast_clause':
@@ -76,63 +66,15 @@ const computeStrata = async (sourceAst) => {
 
 
 
-const runDeductively = async (inputFacts, dedalusText, path, opts = {}) => {
-  const { skipValidation } = opts;
-  const astFactsT0 = await parseDedalus(dedalusText, path);
-  const { explicitStrata, astTFacts } = extractMetadata(astFactsT0);
-
-  if (!SKIP_VALIDATION && !skipValidation) {
-    const tFacts = await validateFile(dedalusText, path);
-    // FIXME: dirty hack for now, just pick first timestamp
-    // it always gonna be AST_TIMESTAMP.
-    // TODO: In future, get rid of timestamps here
-    // they are not necessary.
-    const facts = tFacts.get(Array.from(tFacts.keys())[0]);
-    if ((facts.get('invalid_ast') ?? []).length != 0) {
-      console.log(prettyPrintFacts(tFacts));
-      throw new Error('Received invalid ast for execution');
-    }
-  }
-
-  // better to explicitly separate facts from rules
-  // give interpreter only rules, provide facts from outside
-  // this way it is less messy
-  const rules = rulesFromAstFacts(astTFacts);
-
-  // facts with timestamps that are present in source.
-  const tFactsFromSource = sourceFactsFromAstFacts(astTFacts);
-  // We need to insert these facts as input, when the timestamp is right
-  const facts = mergeTFactsDeep(inputFacts, tFactsFromSource);
-
-  let initialTimestamp = 1; // default initial timestamp
-  if (facts.size !== 0) {
-    initialTimestamp = [...facts.keys()].reduce((t1, t2) => Math.min(t1,t2));
-  }
-
-  // if we don't have explicit strata, we need to compute it
-  let strata = explicitStrata ?? await computeStrata(rules);
-
-  const initialFacts = facts.get(initialTimestamp) ?? (new Map());
-  const runtime = new Interpreter({
-    rules, strata,
-    initialTimestamp: initialTimestamp-1,
-  });
-// debugger
-  runtime.insertFactsForNextTick(initialFacts);
-  const newFacts = runtime.deductFacts();
-
-  return (new Map([[initialTimestamp, newFacts]]));
-};
-
-
-
 const validateFile = async (sourceDedalusText, path) => {
-  const inputAstTFacts = await parseDedalus(sourceDedalusText, path);
+  const inputAstFacts = await parseDedalus(sourceDedalusText, path);
+  const inputAstTFacts = new Map([[-100, inputAstFacts]]);
+
   const validatorDedalusText = await fs.readFile(validatorPath);
-  const { strata, astClauses, factsKeys } =
+  const { strata, astFacts, factsKeys } =
     await processAST(await parseDedalus(validatorDedalusText, validatorPath));
   // just ignore validator initial facts, no need to merge
-  const program = ast2program(astClauses);
+  const program = ast2program(astFacts);
   const rt = new NaiveRuntime(program, inputAstTFacts, strata);
   return await rt.query(factsKeys);
 
@@ -142,69 +84,67 @@ const validateFile = async (sourceDedalusText, path) => {
 
 
 const runFile = async (dedalusText, path) => {
-  const astFacts = await parseDedalus(dedalusText, path);
+  throw new Error('Temporarly disabled');
+//   const astFacts = await parseDedalus(dedalusText, path);
 
-  const facts = sourceFactsFromAstFacts(astFacts);
-  const initialTimestamp = [...facts.keys()].reduce((t1, t2) => Math.min(t1,t2), 1);
+//   const facts = sourceFactsFromAstFacts(astFacts);
+//   const initialTimestamp = [...facts.keys()].reduce((t1, t2) => Math.min(t1,t2), 1);
 
-  // better to explicitly separate facts from rules
-  // give interpreter only rules, provide facts from outside
-  // this way it is less messy
-  const rules = rulesFromAstFacts(astFacts);
-  // const initialTimestamp = getMinimalTimestamp(facts);
-  const runtime = new Interpreter(initialTimestamp-1, rules);
+//   // better to explicitly separate facts from rules
+//   // give interpreter only rules, provide facts from outside
+//   // this way it is less messy
+//   const rules = rulesFromAstFacts(astFacts);
+//   // const initialTimestamp = getMinimalTimestamp(facts);
+//   const runtime = new Interpreter(initialTimestamp-1, rules);
 
-  // if we have exactly same output as previous step
-  // then we are stale, no need to run further
-  runtime.insertFactsForNextTick(facts);
-  const newFacts = runtime.deductFacts();
-  return newFacts;
+//   // if we have exactly same output as previous step
+//   // then we are stale, no need to run further
+//   runtime.insertFactsForNextTick(facts);
+//   const newFacts = runtime.deductFacts();
+//   return newFacts;
 
-  // const tree = dedalusParser.parse(String(dedalusText));
-  // const ast = tree2tables(tree, path);
-  // // console.log(astTables.toJS());
+//   // const tree = dedalusParser.parse(String(dedalusText));
+//   // const ast = tree2tables(tree, path);
+//   // // console.log(astTables.toJS());
 
-  // const initialTimestamp = getMinimalTimestamp(ast);
-  // // better to explicitly separate facts from rules
-  // // give interpreter only rules, provide facts from outside
-  // // this way it is less messy
-  // const rules = rulesFromAst(ast);
-  // const runtime = new Interpreter(initialTimestamp-1, rules);
+//   // const initialTimestamp = getMinimalTimestamp(ast);
+//   // // better to explicitly separate facts from rules
+//   // // give interpreter only rules, provide facts from outside
+//   // // this way it is less messy
+//   // const rules = rulesFromAst(ast);
+//   // const runtime = new Interpreter(initialTimestamp-1, rules);
 
-  // // if we have exactly same output as previous step
-  // // then we are stale, no need to run further
-  // // do {
-  //   const timestamp = runtime.timestamp;
-  //   const facts = factsFromAst(ast, timestamp+1);
-  //   runtime.insertFactsForNextTick(facts);
-  //   // here we also could insert incoming event facts from other nodes
-  //   // runtime.insertFactsForNextTick(eventsFromOtherNodes);
+//   // // if we have exactly same output as previous step
+//   // // then we are stale, no need to run further
+//   // // do {
+//   //   const timestamp = runtime.timestamp;
+//   //   const facts = factsFromAst(ast, timestamp+1);
+//   //   runtime.insertFactsForNextTick(facts);
+//   //   // here we also could insert incoming event facts from other nodes
+//   //   // runtime.insertFactsForNextTick(eventsFromOtherNodes);
 
-  //   // compute all @next and @async rules, store computed facts
-  //   // return emitted @async facts to be delivered outside
-  //   const newFacts = runtime.deductFacts();
-  //   console.log(newFacts);
+//   //   // compute all @next and @async rules, store computed facts
+//   //   // return emitted @async facts to be delivered outside
+//   //   const newFacts = runtime.deductFacts();
+//   //   console.log(newFacts);
 
-  //   // TODO: add check, that no facts in AST left
-  //   // if there is still something, need to jump to that timestamp
-  // // } while (!runtime.isStale());
+//   //   // TODO: add check, that no facts in AST left
+//   //   // if there is still something, need to jump to that timestamp
+//   // // } while (!runtime.isStale());
 };
 
 
 
-const processAST = async (astTFacts0) => {
-  // TODO: remove AST_TIMESTAMP, it doesn't help, useless
-  // always return facts, not tfacts.
-  const { explicitStrata, astTFacts } = extractMetadata(astTFacts0);
-  const astClauses = rulesFromAstFacts(astTFacts);
-  let strata = explicitStrata ?? await computeStrata(astClauses);
-  const initialTFacts = sourceFactsFromAstFacts(astTFacts);
+const processAST = async (astFacts0) => {
+  const { explicitStrata, astFacts } = extractMetadata(astFacts0);
+  let strata = explicitStrata ?? await computeStrata(astFacts);
+  const initialTFacts = sourceFactsFromAstFacts(astFacts);
 
-  const clausesKeys = astClauses.get('ast_clause').map(t => t[0]['symbol']);
+  const clausesKeys = astFacts.get('ast_clause').map(t => t[0]['symbol']);
   const initialFactsKeys = [...initialTFacts].flatMap(([_timestamp, facts]) => [...facts.keys()]);
   const factsKeys = _.uniq([...clausesKeys, ...initialFactsKeys]);
 
-  return { strata, astClauses, initialTFacts, factsKeys };
+  return { strata, astFacts, initialTFacts, factsKeys };
 };
 
 
@@ -215,6 +155,5 @@ export {
   validateFile,
   prettyPrintFacts,
   prettyPrintAST,
-  runDeductively,
   processAST,
 }

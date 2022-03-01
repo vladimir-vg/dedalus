@@ -1,17 +1,12 @@
 import _ from 'lodash';
 import seedrandom from 'seedrandom';
 
-
-// timestamp that we assign to all AST facts
-const AST_TIMESTAMP = -100;
+import { Facts, TFacts } from './runtime';
 
 
 
 const isString = (val) => (typeof val === 'object') && ('string' in val);
 const isInteger = (val) => typeof val === 'number';
-// TODO: rename Atom to Symbol
-// seems like in Datalog community atoms are not same as symbols
-// better to rename to avoid confusion
 const isSymbol = (val) => {
   return (typeof val === 'object') && ('symbol' in val);
 };
@@ -290,7 +285,7 @@ const makeGensymFunc = (filename) => {
 };
 
 // produce sets of tuples for each rule
-const tree2facts = (tree, filename) => {
+const tree2facts = (tree: any, filename: string): Facts => {
   const filenameStr = {string: filename};
 
   // we use random generator for symbol generation
@@ -306,12 +301,12 @@ const tree2facts = (tree, filename) => {
   const tables1 = new Map([...tables].filter(
     ([key, value]) => value.length !== 0));
 
-  return new Map([[AST_TIMESTAMP, tables1]]);
+  return tables1 as Facts;
 };
 
 
 
-const sourceFactsFromAstFacts = (astTFacts) => {
+const sourceFactsFromAstFacts = (astFacts: Facts): TFacts => {
   // we need to walk following facts
   // and assemble facts that they are describing:
   //
@@ -319,8 +314,6 @@ const sourceFactsFromAstFacts = (astTFacts) => {
   // ast_atom_sym_arg/3
   // ast_atom_int_arg/3
   // ast_atom_str_arg/3
-
-  const astFacts = astTFacts.get(AST_TIMESTAMP);
 
   const output = new Map();
   (astFacts.get('ast_atom') ?? [])
@@ -364,25 +357,25 @@ const sourceFactsFromAstFacts = (astTFacts) => {
 
 
 
-const rulesFromAstFacts = (astTFacts) => {
-  const astFacts = astTFacts.get(AST_TIMESTAMP);
-  const rulesFacts = new Map([...astFacts].filter(([key, _tuples]) => {
-    switch (key) {
-      case 'ast_atom':
-      case 'ast_atom_sym_arg':
-      case 'ast_atom_int_arg':
-      case 'ast_atom_str_arg':
-        return false;
-      default:
-        return true;
-    }
-  }));
-  return rulesFacts;
-};
+// const rulesFromAstFacts = (astTFacts) => {
+//   const astFacts = astTFacts.get(AST_TIMESTAMP);
+//   const rulesFacts = new Map([...astFacts].filter(([key, _tuples]) => {
+//     switch (key) {
+//       case 'ast_atom':
+//       case 'ast_atom_sym_arg':
+//       case 'ast_atom_int_arg':
+//       case 'ast_atom_str_arg':
+//         return false;
+//       default:
+//         return true;
+//     }
+//   }));
+//   return rulesFacts;
+// };
 
 
 
-const extractMetadata = (astTFacts0) => {
+const extractMetadata = (astFacts0) => {
   // all facts and rules prefixed with '$meta' carry
   // some metainformation about the code
   //
@@ -390,7 +383,7 @@ const extractMetadata = (astTFacts0) => {
   // other rules. That's why we extract them here.
 
   const astFacts = new Map(
-    [...astTFacts0.get(AST_TIMESTAMP)].map(([key, tuples]) => {
+    [...astFacts0].map(([key, tuples]) => {
       switch (key) {
         case 'ast_atom':
           {
@@ -411,13 +404,11 @@ const extractMetadata = (astTFacts0) => {
         default: return [key, tuples];
       }
     }));
-
-  const astTFacts = new Map([[AST_TIMESTAMP, astFacts]]);
   
   let explicitStrata = null;
 
   const META_INFO_TIMESTAMP = 0;
-  const facts = sourceFactsFromAstFacts(astTFacts0).get(META_INFO_TIMESTAMP) ?? (new Map());
+  const facts = sourceFactsFromAstFacts(astFacts0).get(META_INFO_TIMESTAMP) ?? (new Map());
 
   if (facts.get('$meta stratum')) {
     const vertices0 = _.groupBy(
@@ -430,7 +421,7 @@ const extractMetadata = (astTFacts0) => {
       .map(([s1, s2]) => [s1['symbol'], s2['symbol']]);
     explicitStrata = { vertices, edges };
   }
-  return { explicitStrata, astTFacts };
+  return { explicitStrata, astFacts };
 };
 
 
@@ -466,7 +457,7 @@ export {
   mergeFactsDeep,
   tree2facts,
   sourceFactsFromAstFacts,
-  rulesFromAstFacts,
+  // rulesFromAstFacts,
   extractMetadata,
   collectListFromFacts,
 }
