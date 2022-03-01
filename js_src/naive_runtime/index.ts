@@ -83,7 +83,7 @@ class NaiveRuntime implements Runtime {
   initialTFacts: TFacts;
   strata: Strata;
 
-  paused: boolean;
+  // paused: boolean;
   currentTimestamp: number;
 
   // contains set of facts that were either
@@ -96,13 +96,14 @@ class NaiveRuntime implements Runtime {
   // from current state
   deductedFacts: Facts | null;
   tillFixpointPromise: Promise<void> | null;
+  fixpointResolveCallback: () => void | null;
 
   constructor(program: Program, initialTFacts: TFacts, strata: Strata, options?: any) {
     this.program = program;
     this.initialTFacts = initialTFacts;
     this.strata = strata;
 
-    this.paused = true;
+    // this.paused = true;
     
     this.currentTimestamp = 0;
     if (this.initialTFacts.size !== 0) {
@@ -112,6 +113,7 @@ class NaiveRuntime implements Runtime {
     this.deductedFacts = null;
 // debugger
     this.tillFixpointPromise = null;
+    this.fixpointResolveCallback = null;
   }
 
   addOutputListener(opts: { key?: string, callback: RuntimeOutputListener }): Promise<void> {
@@ -122,9 +124,9 @@ class NaiveRuntime implements Runtime {
   }
 
   query(keys: string[]): Promise<Facts> {
-    if (!this.paused) {
-      throw new Error('Not implemented');
-    }
+    // if (!this.paused) {
+    //   throw new Error('Not implemented');
+    // }
 
     if (!this.deductedFacts) {
       this._deductFacts();
@@ -160,9 +162,8 @@ class NaiveRuntime implements Runtime {
     // if we already have a promise that waits fixpoint then return just it
     if (this.tillFixpointPromise) { return this.tillFixpointPromise; }
   
-    let resolveCallback;
     this.tillFixpointPromise = new Promise((resolve, reject) => {
-      resolveCallback = resolve;
+      this.fixpointResolveCallback = resolve;
     });
     
     throw new Error('Not implemented');
@@ -180,9 +181,9 @@ class NaiveRuntime implements Runtime {
       return Promise.resolve(false);
     }
 
-    if (!this.isPaused()) {
-      throw new Error('Not implemented');
-    }
+    // if (!this.isPaused()) {
+    //   throw new Error('Not implemented');
+    // }
 
     // There must be efficient way to compare whether facts are same
     // for now we do stupid thing: count number of tuples,
@@ -196,15 +197,16 @@ class NaiveRuntime implements Runtime {
     return Promise.resolve(isFixpoint);
   }
 
-  isPaused(): boolean {
-    return this.paused;
-  }
+  // isPaused(): boolean {
+  //   // if promise is present, then ticking in the loop
+  //   return this.paused;
+  // }
 
-  pause(): Promise<void> {
-    if (this.paused) { return Promise.resolve(); }
+  // pause(): Promise<void> {
+  //   if (this.paused) { return Promise.resolve(); }
 
-    throw new Error('Not implemented');
-  }
+  //   throw new Error('Not implemented');
+  // }
 
   ///
   ///
