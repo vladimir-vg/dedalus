@@ -1,0 +1,10 @@
+test_passed :-
+  stratum(St1, rule1),
+
+  stratum(St2, c_rule2),
+  stratum(St2, c_rule3),
+  stratum(St2, c_rule4),
+
+  stratum_dependency(St2, St1),
+
+  St1 =/= St2;

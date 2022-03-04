@@ -3,7 +3,7 @@ student('JimBlack', ee, senior)@0;
 professor(ohm, ee)@1;
 professor(bell, ee)@1;
 
-elig_adv(S, P) <-
+elig_adv(S, P) :-
   student(S, Major, _Year),
   professor(P, Major),
   choose((S), (P));
@@ -11,12 +11,12 @@ elig_adv(S, P) <-
 
 
 % either of these choices are accepted but not both at once
-test_passed(ohm) <-
+test_passed(ohm) :-
   elig_adv('JimBlack', ohm);
 
-test_passed(bell) <-
+test_passed(bell) :-
   elig_adv('JimBlack', bell);
 
-test_failed <-
+test_failed :-
   elig_adv('JimBlack', ohm),
   elig_adv('JimBlack', bell);

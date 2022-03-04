@@ -6,6 +6,9 @@ test_passed :-
 
   stratum(St2, unreachable),
   stratum(St2, unreachable_node),
+
+  stratum_dependency(St2, St1),
+
   St1 =/= St2;
 
 % test_failed(Rule) :-

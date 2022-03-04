@@ -1,0 +1,15 @@
+
+
+c_rule1(A) :- c_rule2(A);
+c_rule2(A) :- c_rule3(A);
+c_rule3(A) :- c_rule1(A);
+
+ground(1)@1;
+
+rule4(A) :-
+  ground(A),
+  notin c_rule2(A);
+
+rule5(A) :-
+  rule4(A),
+  ground(A);

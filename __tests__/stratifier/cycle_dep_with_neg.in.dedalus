@@ -1,0 +1,23 @@
+ground(5, 10)@1;
+
+
+rule1(A) :-
+  ground(A, A);
+
+c_rule2(A) :-
+  c_rule4(A);
+c_rule2(A) :-
+  ground(_, A),
+  ground(A, _);
+
+c_rule3(B) :-
+  c_rule2(A),
+  ground(A, B);
+
+c_rule4(A) :-
+  c_rule3(A),
+  notin rule1(A);
+
+% we have circular dependency: rule2 -> rule3 -> rule4 -> rule2
+% rule4 has negative dependency on rule1
+% thus, must be stratified

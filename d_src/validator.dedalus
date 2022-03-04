@@ -64,6 +64,7 @@
 %%%
 %%% [ ] No negation in dependency cycles
 %%% [ ] _IgnoredVariable's used only once in body (otherwise they are used for matching)
+%%% [ ] choose((X, ...), (Y, ...)), X... can be empty, but Y... cannot
 %%%
 
 
