@@ -96,7 +96,6 @@ class NaiveRuntime implements Runtime {
   initialTFacts: TFacts;
   strata: Strata;
 
-  // paused: boolean;
   currentTimestamp: number;
 
   // contains set of facts that were either
@@ -109,12 +108,14 @@ class NaiveRuntime implements Runtime {
   // from current state
   deductedFacts: Facts | null;
   tillFixpointPromise: Promise<void> | null;
-  // fixpointResolveCallback: () => void | null;
+
+  inputQueue: Facts[];
 
   constructor(program: Program, initialTFacts: TFacts, strata: Strata, options?: any) {
     this.program = program;
     this.initialTFacts = initialTFacts;
     this.strata = strata;
+    this.inputQueue = [];
 
     // this.paused = true;
     
@@ -137,10 +138,6 @@ class NaiveRuntime implements Runtime {
   }
 
   query(keys: string[]): Promise<Facts> {
-    // if (!this.paused) {
-    //   throw new Error('Not implemented');
-    // }
-
     if (!this.deductedFacts) {
       this._deductFacts();
     }
@@ -191,10 +188,6 @@ class NaiveRuntime implements Runtime {
       return Promise.resolve(false);
     }
 
-    // if (!this.isPaused()) {
-    //   throw new Error('Not implemented');
-    // }
-
     // There must be efficient way to compare whether facts are same
     // for now we do stupid thing: count number of tuples,
     // merge facts. If after merge number of tuples stayed the same,
@@ -233,8 +226,10 @@ class NaiveRuntime implements Runtime {
     const dClauses = clauses.filter(({ chooseExprs }) => chooseExprs.length == 0);
     const ndClauses = clauses.filter(({ chooseExprs }) => chooseExprs.length != 0);
 
-    let accumulatedFacts: Facts = this.currentState;
-    
+    let accumulatedFacts = this.inputQueue.reduce((acc, inputFacts) =>
+      mergeFactsDeep(acc, inputFacts), this.currentState) as Facts;
+    this.inputQueue = [];
+
     stOrder.forEach(stratum => {
       const relevantDClauses = dClauses.filter(({ key }) => 
       this.strata.vertices[stratum].includes(key));
@@ -266,7 +261,7 @@ class NaiveRuntime implements Runtime {
         accumulatedFacts = accumulatedFacts0;
       } while (newNDTuplesCount > 0);
     });
-// debugger
+
     this.deductedFacts = mergeFactsDeep(this.currentState, accumulatedFacts) as Facts;
   }
 
@@ -275,31 +270,50 @@ class NaiveRuntime implements Runtime {
       this._deductFacts();
     }
     const { inductive: clauses } = this.program;
-    // const dClauses = clauses.filter(({ chooseExprs }) => chooseExprs.length == 0);
-    // const ndClauses = clauses.filter(({ chooseExprs }) => chooseExprs.length != 0);
     // inductive clauses don't depend on each other and don't have cycles
     // we can compute next state just walking all clauses in one pass
-    // debugger
     const { facts: inductedFacts } = produceFacts(clauses, this.deductedFacts, {});
     // stupid way to remove duplicates
     // TODO: replace with something more efficient
-    // const inductedFacts = mergeFactsDeep(inductedFacts1, inductedFacts2);
     const inductedFactsWithoutDuplicates = mergeFactsDeep(inductedFacts, inductedFacts) as Facts;
     return inductedFactsWithoutDuplicates;
   }
 
   private _loopTick(): Promise<void> {
+    this._triggerAsync();
     const facts = this._inductFacts();
+
     this.prevState = this.currentState;
     this.currentTimestamp += 1;
     const initialFacts = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
 
     this.currentState = mergeFactsDeep(facts, initialFacts) as Facts;
-debugger
+
     // this we moved to next timestamp and updated state
     // we need to clear cached deductedFacts
     this.deductedFacts = null;
     return Promise.resolve();
+  }
+
+  // this method creates promises that would compute async clauses
+  // and enquque then for input
+  private _triggerAsync() {
+    if (!this.deductedFacts) {
+      this._deductFacts();
+    }
+
+    const { asynchronous: clauses } = this.program;
+    const currentFacts = this.deductedFacts;
+    // since we do not modify facts inplace, we can just refer to
+    // currently deducted facts in the callback
+    new Promise((resolve, reject) => {
+      const { facts } = produceFacts(clauses, currentFacts, {});
+      // stupid way to remove duplicates
+      // TODO: replace with something more efficient
+      const facts1 = mergeFactsDeep(facts, facts) as Facts;
+      this.inputQueue.push(facts1);
+      resolve(true);
+    });
   }
 }
 
