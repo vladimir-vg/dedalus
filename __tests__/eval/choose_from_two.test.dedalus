@@ -1,4 +1,4 @@
-student('JimBlack', ee, senior)@0;
+student('JimBlack', ee, senior)@1;
 
 professor(ohm, ee)@1;
 professor(bell, ee)@1;

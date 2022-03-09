@@ -68,7 +68,7 @@ const testcases = await findTestcases({
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    // '__tests__/eval/var_ignored_in_negation.test.dedalus',
+    // '__tests__/eval/choose_from_two.test.dedalus',
   ],
 });
 
@@ -214,7 +214,7 @@ const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) =
     testPassed = hasAtLeastOnePass && !hasAtLeastOneFailure;
     testFailed = fixpointReached && !testPassed;
     if (noInduction) { break; }
-
+debugger
     if (testFailed || testPassed) { debugger; break; }
 
     await rt.tick();
@@ -225,7 +225,7 @@ const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) =
     const allDeductedFacts = await rt.query(queryKeys);
     const currentTimestamp = rt.getCurrentTimestamp();
     const allDeductedTFacts = new Map([[currentTimestamp, allDeductedFacts]]);
-debugger
+
     console.log(`for ${matcherPath}:\n` + prettyPrintFacts(allDeductedTFacts));
     if (inputHasAST) {
       console.log(prettyPrintAST(allDeductedTFacts))

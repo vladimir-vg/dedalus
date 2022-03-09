@@ -261,35 +261,48 @@ const aggregateRows = (table, params) => {
 
 
 
-const groupAndChooseRows = (table, keyColumns, selectionColumns, chooseFn) => {
+const groupAndChooseRows = (table, keyColumns, selectionColumns, choicesMade, chooseFn) => {
+  // TODO: remember choices for each clause separately. Right now all choices
+  // in different clauses (even with different names) are lumped together
+
   const choices: {[key: string]: {[key: string]: any[]}} = {};
   table.rows.forEach(row => {
     const groupValues = projectRowValues(row, table.columns, keyColumns);
-    const key = hash(groupValues);
-
     const rowValues = projectRowValues(row, table.columns, [...keyColumns, ...selectionColumns]);
-    choices[key] ??= {};
-    
+    const key1 = hash(groupValues);
     const key2 = hash(rowValues);
-    choices[key][key2] ??= [];
-    choices[key][key2].push(rowValues);
+
+    // we already have chosen row for these keys during this tick before,
+    // skip it
+    if (choicesMade[key1]) {
+      return;
+    }
+
+    choices[key1] ??= {};
+    choices[key1][key2] = rowValues;
   });
 
-  const madeChoices = _.mapValues(choices, (choices2) => chooseFn(_.values(choices2)));
+  const newChoicesMade = _.cloneDeep(choicesMade);
+  const newChoices = _.mapValues(choices, (choices2, key1) => {
+    return chooseFn(_.values(choices2));
+  });
 
   const rows = [];
   table.rows.forEach(row => {
     const groupValues = projectRowValues(row, table.columns, keyColumns);
-    const key = hash(groupValues);
-    const expectedRowValues = madeChoices[key];
+    const key1 = hash(groupValues);
+    const expectedRowValues = newChoices[key1];
     const rowValues = projectRowValues(row, table.columns, [...keyColumns, ...selectionColumns]);
-
+    const key2 = hash(rowValues);
+    
     if (_.isEqual(expectedRowValues, rowValues)) {
+      newChoicesMade[key1] ??= {};
+      newChoicesMade[key1][key2] = rowValues;
       rows.push(row);
     }
   });
 
-  return rows;
+  return { rows, choicesMade: newChoicesMade };
 }
 
 
@@ -334,9 +347,9 @@ class Table {
     return this.naturalJoin(table2);
   }
 
-  groupAndChoose(keyColumns, selectionColumns, chooseFn) {
-    const hasUnknownKVar = _.some(keyColumns, col => !this.columns.includes(col.variable));
-    const hasUnknownRVar = _.some(selectionColumns, col => !this.columns.includes(col.variable));
+  groupAndChoose(keyColumns, selectionColumns, choicesMade, chooseFn) {
+    const hasUnknownKVar = _.some(keyColumns, col => !this.columns.includes(col));
+    const hasUnknownRVar = _.some(selectionColumns, col => !this.columns.includes(col));
     if (hasUnknownKVar) {
       throw new Error(`Unexpected key variable ${JSON.stringify(keyColumns)} from ${JSON.stringify(this.columns)}`);
     }
@@ -344,9 +357,10 @@ class Table {
       throw new Error(`Unexpected key variable ${JSON.stringify(selectionColumns)} from ${JSON.stringify(this.columns)}`);
     }
 
-    const rows = groupAndChooseRows(this, keyColumns, selectionColumns, chooseFn);
+    const { rows, choicesMade: newChoicesMade } = groupAndChooseRows(this, keyColumns, selectionColumns, choicesMade, chooseFn);
+    const table = new Table(this.columns, rows);
 
-    return new Table(this.columns, rows);
+    return { table, choicesMade: newChoicesMade };
   }
 
   // this method returns rows, not table.

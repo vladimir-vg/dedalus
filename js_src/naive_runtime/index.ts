@@ -16,16 +16,17 @@ const factsSubset = (keys: string[], facts: Facts): Facts => {
 
 
 
-const produceFacts = (clauses: Clause[], facts: Facts): Facts => {
+const produceFacts = (clauses: Clause[], inputFacts: Facts, choicesMade: any)
+: { facts: Facts, choicesMade: any } => {
   // Just walk all clauses one by one and produce all possible new facts
   // from given facts deductively
-  return clauses.reduce((newFacts, clause) => {
+  return clauses.reduce(({ facts: newFacts, choicesMade }, clause) => {
     // debugger
     const { key, params, bodyFacts, bodyConditions, chooseExprs } = clause;
     const positiveBodyFacts = bodyFacts.filter(({ isNegated }) => !isNegated);
     const negativeBodyFacts = bodyFacts.filter(({ isNegated }) => isNegated);
-    const positiveTables = positiveBodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
-    const negativeTables = negativeBodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
+    const positiveTables = positiveBodyFacts.map(({ key, params }) => Table.fromFacts(inputFacts, key, params));
+    const negativeTables = negativeBodyFacts.map(({ key, params }) => Table.fromFacts(inputFacts, key, params));
     const table0 = positiveTables.reduce((t1, t2) => t1.naturalJoin(t2));
     const table1 = table0.select(bodyConditions);
     const table2 = negativeTables.reduce((acc, t) => acc.antijoin(t), table1);
@@ -39,15 +40,17 @@ const produceFacts = (clauses: Clause[], facts: Facts): Facts => {
     // frequency of different outcomes. Just in case, shuffle.
     const chooseExprs1 = _.shuffle(chooseExprs);
     const choiceFn = (rows) => _.sample(rows);
-    const table3 = chooseExprs1.reduce((acc, { keyVars, rowVars }) =>
-      acc.groupAndChoose(keyVars, rowVars, choiceFn), table2);
+    const { table: table3, choicesMade: newChoicesMade } =
+      chooseExprs1.reduce(({ table: accTable, choicesMade: accChoicesMade }, { keyVars, rowVars }) =>
+        accTable.groupAndChoose(keyVars, rowVars, accChoicesMade, choiceFn),
+      { table: table2, choicesMade });
 
     const rows = table3.projectColumns(params);
 
     const collectedRows = newFacts.get(key) ?? [];
     newFacts.set(key, [...collectedRows, ...rows]);
-    return newFacts;
-  }, new Map());
+    return { facts: newFacts, choicesMade: newChoicesMade };
+  }, { facts: (new Map()), choicesMade });
 };
 
 
@@ -236,9 +239,10 @@ class NaiveRuntime implements Runtime {
       
       let newDTuplesCount = 0;
       let newNDTuplesCount = 0;
+      let choicesMade = {};
       do {
         do {
-          const newFacts = produceFacts(relevantDClauses, accumulatedFacts);
+          const { facts: newFacts } = produceFacts(relevantDClauses, accumulatedFacts, null);
           const accumulatedFacts0 = mergeFactsDeep(accumulatedFacts, newFacts) as Facts;
           newDTuplesCount = countUniqFacts(accumulatedFacts0) - countUniqFacts(accumulatedFacts);
           accumulatedFacts = accumulatedFacts0;
@@ -250,7 +254,9 @@ class NaiveRuntime implements Runtime {
         //
         // Because we run only one pass on clauses with choose and then run the rest of
         // deductive clauses in the loop, we provide more rows to choose from.
-        const newFacts = produceFacts(relevantNDClauses, accumulatedFacts);
+        const { facts: newFacts, choicesMade: newChoicesMade } =
+          produceFacts(relevantNDClauses, accumulatedFacts, choicesMade);
+        choicesMade = newChoicesMade;
         const accumulatedFacts0 = mergeFactsDeep(accumulatedFacts, newFacts) as Facts;
         newNDTuplesCount = countUniqFacts(accumulatedFacts0) - countUniqFacts(accumulatedFacts);
         accumulatedFacts = accumulatedFacts0;
@@ -265,12 +271,15 @@ class NaiveRuntime implements Runtime {
       this._deductFacts();
     }
     const { inductive: clauses } = this.program;
+    // const dClauses = clauses.filter(({ chooseExprs }) => chooseExprs.length == 0);
+    // const ndClauses = clauses.filter(({ chooseExprs }) => chooseExprs.length != 0);
     // inductive clauses don't depend on each other and don't have cycles
     // we can compute next state just walking all clauses in one pass
     // debugger
-    const inductedFacts = produceFacts(clauses, this.deductedFacts);
+    const { facts: inductedFacts } = produceFacts(clauses, this.deductedFacts, {});
     // stupid way to remove duplicates
     // TODO: replace with something more efficient
+    // const inductedFacts = mergeFactsDeep(inductedFacts1, inductedFacts2);
     const inductedFactsWithoutDuplicates = mergeFactsDeep(inductedFacts, inductedFacts) as Facts;
     return inductedFactsWithoutDuplicates;
   }
@@ -280,7 +289,7 @@ class NaiveRuntime implements Runtime {
     this.prevState = this.currentState;
     this.currentTimestamp += 1;
     const initialFacts = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
-    debugger
+
     this.currentState = mergeFactsDeep(facts, initialFacts) as Facts;
 
     // this we moved to next timestamp and updated state

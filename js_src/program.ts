@@ -93,7 +93,7 @@ const collectChooseExprs = (ast, clauseId) => {
     if (!doesBelongToClause) { return; }
 
     const keep = (row) => _.isEqual(row[0], exprId);
-    const getPair = ([id, index, value]) => [index, {variable: value['symbol']}];
+    const getPair = ([id, index, value]) => [index, value['symbol']];
     const keyVars = collectListFromFacts(ast, {
       'ast_body_choose_key_var': { keep, getPair }
     });
