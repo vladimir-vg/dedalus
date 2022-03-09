@@ -7,6 +7,8 @@ edge(c,e)@1;
 edge(d,f)@1;
 edge(e,f)@1;
 
+edge(A,B)@next :- edge(A,B);
+
 selected_edge(start,a)@1;
 
 visited_node(A) :- selected_edge(A, _);
@@ -47,7 +49,7 @@ test_passed :- path1, notin path2, notin path3;
 test_passed :- notin path1, path2, notin path3;
 test_passed :- notin path1, notin path2, path3;
 
-% can't select two different edges from same starting point
+% can't select two different edges from same node
 test_failed :-
   selected_edge(a,b),
   selected_edge(a,c);

@@ -295,7 +295,7 @@ class NaiveRuntime implements Runtime {
     const initialFacts = this.initialTFacts.get(this.currentTimestamp) ?? (new Map());
 
     this.currentState = mergeFactsDeep(facts, initialFacts) as Facts;
-
+debugger
     // this we moved to next timestamp and updated state
     // we need to clear cached deductedFacts
     this.deductedFacts = null;

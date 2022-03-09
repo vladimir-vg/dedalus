@@ -1,30 +1,38 @@
 % LineName, StationName, OpeningYear, Depth
-metro("Sokolnicheskaya", "Bulvar Rokossovskogo", 1990, -8)@1;
-metro("Sokolnicheskaya", "Cherkizovskaya", 1990, -9)@1;
-metro("Sokolnicheskaya", "Preobrazhenskaya Ploshchad", 1965, -8)@1;
-metro("Sokolnicheskaya", "Sokolniki", 1935, -9)@1;
-metro("Zamoskvoretskaya", "Khovrino", 2017, -14)@1;
-metro("Zamoskvoretskaya", "Belomorskaya", 2018, -25)@1;
-metro("Filyovskaya", "Kuntsevskaya", 1965, 0)@1;
-metro("Filyovskaya", "Kutuzovskaya", 1958, 0)@1;
-metro("Filyovskaya", "Studencheskaya", 1958, 0)@1;
+metro("red", "Bulvar Rokossovskogo", 1990, -8)@1;
+metro("red", "Cherkizovskaya", 1990, -9)@1;
+metro("red", "Preobrazhenskaya Ploshchad", 1965, -8)@1;
+metro("red", "Sokolniki", 1935, -9)@1;
+metro("green", "Khovrino", 2017, -14)@1;
+metro("green", "Belomorskaya", 2018, -25)@1;
+metro("aqua", "Kuntsevskaya", 1965, 0)@1;
+metro("aqua", "Kutuzovskaya", 1958, 0)@1;
+metro("aqua", "Studencheskaya", 1958, 0)@1;
 
-
-foo :-
+rule1(Line, Station, Year) :-
   metro(Line, Station, Year, _Depth),
-  notin selected(Station),
-  choose((s));
+  % should be equivalent to
+  % choose((Line), (Station, Year))
+  choose((Line), (Year)),
+  choose((Year), (Station));
 
+rule1_count(Line, Year, count<Station>) :-
+  rule1(Line, Station, Year);
 
-rule1(Line, Year, count<Station>):-
-  % group stations by line and year
+rule1_correct_selection_count :-
+  rule1_count("red", 1990, 1),
+  rule1_count("green", 1958, 1);
+
+rule2(Line, Station, Year) :-
   metro(Line, Station, Year, _Depth),
-  choose((Line, Year), (Station));
+  % should be equivalent to
+  % choose((Line), (Station, Year))
+  choose((Line), (Year)),
 
-correct_grouping :-
-  rule1("Filyovskaya", 1958, 1),
-  rule1("Filyovskaya", 1965, 1),
-  rule1("Filyovskaya", 1965, 1),
+% rule2(Line, Station, Year) :-
+%   metro(Line, Station, Year, _Depth),
+%   % should be equivalent to
+%   choose((Line), (Station, Year));
 
 % rule2 :-
 %   metro(Line2, Station2, Year2, _Depth),

@@ -69,7 +69,7 @@ const testcases = await findTestcases({
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    '__tests__/eval/choice_with_next.test.dedalus',
+    // '__tests__/eval/choice_with_next.test.dedalus',
   ],
 });
 
