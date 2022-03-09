@@ -261,6 +261,39 @@ const aggregateRows = (table, params) => {
 
 
 
+const groupAndChooseRows = (table, keyColumns, selectionColumns, chooseFn) => {
+  const choices: {[key: string]: {[key: string]: any[]}} = {};
+  table.rows.forEach(row => {
+    const groupValues = projectRowValues(row, table.columns, keyColumns);
+    const key = hash(groupValues);
+
+    const rowValues = projectRowValues(row, table.columns, [...keyColumns, ...selectionColumns]);
+    choices[key] ??= {};
+    
+    const key2 = hash(rowValues);
+    choices[key][key2] ??= [];
+    choices[key][key2].push(rowValues);
+  });
+
+  const madeChoices = _.mapValues(choices, (choices2) => chooseFn(_.values(choices2)));
+
+  const rows = [];
+  table.rows.forEach(row => {
+    const groupValues = projectRowValues(row, table.columns, keyColumns);
+    const key = hash(groupValues);
+    const expectedRowValues = madeChoices[key];
+    const rowValues = projectRowValues(row, table.columns, [...keyColumns, ...selectionColumns]);
+
+    if (_.isEqual(expectedRowValues, rowValues)) {
+      rows.push(row);
+    }
+  });
+
+  return rows;
+}
+
+
+
 class Table {
   columns: string[];
   rows: any[][];
@@ -301,6 +334,24 @@ class Table {
     return this.naturalJoin(table2);
   }
 
+  groupAndChoose(keyColumns, selectionColumns, chooseFn) {
+    const hasUnknownKVar = _.some(keyColumns, col => !this.columns.includes(col.variable));
+    const hasUnknownRVar = _.some(selectionColumns, col => !this.columns.includes(col.variable));
+    if (hasUnknownKVar) {
+      throw new Error(`Unexpected key variable ${JSON.stringify(keyColumns)} from ${JSON.stringify(this.columns)}`);
+    }
+    if (hasUnknownRVar) {
+      throw new Error(`Unexpected key variable ${JSON.stringify(selectionColumns)} from ${JSON.stringify(this.columns)}`);
+    }
+
+    const rows = groupAndChooseRows(this, keyColumns, selectionColumns, chooseFn);
+
+    return new Table(this.columns, rows);
+  }
+
+  // this method returns rows, not table.
+  // some columns may not have names,
+  // since they may be defined as constant values or results of aggregation
   projectColumns(params) {
     const hasUnknownColumn = _.some(params, col =>
       col.variable && !this.columns.includes(col.variable));

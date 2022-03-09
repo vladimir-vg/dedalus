@@ -34,9 +34,7 @@ type Clause = {
   params: any[],
   bodyFacts: any[],
   bodyConditions: any[],
-  
-  // produced from bodyFacts
-  deps: string[],
+  chooseExprs: any[],
 }
 
 type Program = {

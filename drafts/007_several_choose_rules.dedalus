@@ -16,29 +16,6 @@ select_author(Citizenship, Year, Author) <-
   choose((Year), (Author)),
   choose((Citizenship), (Author));
 
-% According to Sergio Greco and Carlo Zaniolo paper
-% that was referred in Dedalus paper
-% this select_author rule should be converted to something like this:
-% 
-% select_author(Citizenship, Year, Author) <-
-%   'select_author$choose_transformed'(Citizenship, Year, Author);
-% 'select_author$choose_transformed'(Citizenship, Year, Author) <-
-%   book(Author, Title, Year),
-%   author(Author, Citizenship),
-%   'select_author$chosen'(Year, Citizenship, Author);
-% 'select_author$chosen'(Year, Citizenship, Author) <-
-%   book(Author, Title, Year),
-%   author(Author, Citizenship),
-%   not 'select_author$diff_choice'(Year, Citizenship, Author);
-% 'select_author$diff_choice'(Year, Citizenship, Author) <-
-%   'select_author$chosen'(Year, Citizenship, AuthorPrime),
-%   Author != AuthorPrime;
-%
-% Basically, I just select all possible values for 'select_author$chosen'
-% non-deterministically pick one and assert it as a fact
-
-
-
 test_passed(Author) <-
   author(Author, usa),
   select_author(_, 1961, Author);
@@ -49,13 +26,3 @@ test_failed <-
   % row with [usa, 1960] must be unique
   select_author(usa, 1961, heinlein),
   select_author(usa, 1961, harrison);
-
-
-% if we deliver test_passed/test_failed events
-% via @async, it would be more correct Dedalus code
-% without any special treatment of certain rules,
-% like test_failed/test_passed.
-test_passed(Author, #TestSystem)@async <-
-  testcase(#Testcase),
-  author(Author, usa),
-  select_author(_, 1961, Author);

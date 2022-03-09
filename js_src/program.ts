@@ -84,16 +84,38 @@ const collectBodyConditions = (ast, clauseId) => {
   return items;
 };
 
+const collectChooseExprs = (ast, clauseId) => {
+  const items = [];
+  (ast.get('ast_body_choose') ?? []).forEach(tuple => {
+    const [exprId] = tuple;
+    const doesBelongToClause = ast.get('ast_body_expr')
+      .some(tuple => _.isEqual(tuple, [clauseId, exprId]));
+    if (!doesBelongToClause) { return; }
+
+    const keep = (row) => _.isEqual(row[0], exprId);
+    const getPair = ([id, index, value]) => [index, {variable: value['symbol']}];
+    const keyVars = collectListFromFacts(ast, {
+      'ast_body_choose_key_var': { keep, getPair }
+    });
+    const rowVars = collectListFromFacts(ast, {
+      'ast_body_choose_row_var': { keep, getPair }
+    });
+
+    items.push({ keyVars, rowVars });
+  });
+
+  return items;
+};
+
 const prepareClauses = (ast, suffix): Clause[] => {
   const clauses = [];
   (ast.get('ast_clause') ?? []).forEach(cTuple => {
     const [name, clauseId, suffix1] = cTuple;
-    // we are interested only in deductive rules
     if (!_.isEqual(suffix1, suffix)) { return; }
 
     const keep = (row) => _.isEqual(row[0], clauseId);
     const getPairSimpleValue = ([id, index, value]) => [index, value];
-    // const t0 = performance.now();
+
     const params = collectListFromFacts(ast, {
       'ast_clause_var_arg': {
         keep,
@@ -104,21 +126,12 @@ const prepareClauses = (ast, suffix): Clause[] => {
       'ast_clause_str_arg': { keep, getPair: getPairSimpleValue },
       'ast_clause_sym_arg': { keep, getPair: getPairSimpleValue },
     });
-    // const t1 = performance.now();
 
-    const key = name['symbol']; // `${name['symbol']}/${params.length}`;
-
-    // const t2 = performance.now();
+    const key = name['symbol'];
     const bodyFacts = collectBodyFacts(ast, clauseId);
-    // const t3 = performance.now();
     const bodyConditions = collectBodyConditions(ast, clauseId);
-    // const t4 = performance.now();
-
-    // console.log(name['symbol'], { collect: t1-t0, bodyFacts: t3-t2, bodyConditions: t4-t3 });
-
-    const deps = bodyFacts.map(({ key }) => key.split('/')[0]);
-
-    clauses.push({ key, params, bodyFacts, bodyConditions, deps });
+    const chooseExprs = collectChooseExprs(ast, clauseId);
+    clauses.push({ key, params, bodyFacts, bodyConditions, chooseExprs });
   });
   return clauses;
 };

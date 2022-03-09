@@ -17,14 +17,12 @@ const factsSubset = (keys: string[], facts: Facts): Facts => {
 
 
 const produceFacts = (clauses: Clause[], facts: Facts): Facts => {
-  // Just walk all inductive rules (not @async and not @next)
-  // one by one and produce all possible new facts from given facts
-  // debugger
+  // Just walk all clauses one by one and produce all possible new facts
+  // from given facts deductively
   return clauses.reduce((newFacts, clause) => {
     // debugger
-    const { key, params, bodyFacts, bodyConditions } = clause;
+    const { key, params, bodyFacts, bodyConditions, chooseExprs } = clause;
     const positiveBodyFacts = bodyFacts.filter(({ isNegated }) => !isNegated);
-    // const positiveBodyFacts = _.sortBy(positiveBodyFacts0, ({ key }) => (facts.get(key) ?? []).length);
     const negativeBodyFacts = bodyFacts.filter(({ isNegated }) => isNegated);
     const positiveTables = positiveBodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
     const negativeTables = negativeBodyFacts.map(({ key, params }) => Table.fromFacts(facts, key, params));
@@ -32,12 +30,19 @@ const produceFacts = (clauses: Clause[], facts: Facts): Facts => {
     const table1 = table0.select(bodyConditions);
     const table2 = negativeTables.reduce((acc, t) => acc.antijoin(t), table1);
 
-    const rows = table2.projectColumns(params);
+    // at this point we selected all positive facts, filtered them out
+    // and removed rows that don't satisfy negated goals
+    //
+    // now we can apply non-deterministic choice
+    
+    // order at which we apply choice operators may affect
+    // frequency of different outcomes. Just in case, shuffle.
+    const chooseExprs1 = _.shuffle(chooseExprs);
+    const choiceFn = (rows) => _.sample(rows);
+    const table3 = chooseExprs1.reduce((acc, { keyVars, rowVars }) =>
+      acc.groupAndChoose(keyVars, rowVars, choiceFn), table2);
 
-    // // remove rows that are already present
-    // // so we would return only new facts
-    // const newRows = rows.filter(row =>
-    //   !_.find(facts.get(key), row2 => _.isEqual(row, row2)))
+    const rows = table3.projectColumns(params);
 
     const collectedRows = newFacts.get(key) ?? [];
     newFacts.set(key, [...collectedRows, ...rows]);
@@ -216,32 +221,40 @@ class NaiveRuntime implements Runtime {
   private _deductFacts() {
     const stOrder = getStratumComputationOrder(this.strata);
     const { deductive: clauses } = this.program;
+    
+    // deterministic & non-deterministic (has choose)
+    const dClauses = clauses.filter(({ chooseExprs }) => chooseExprs.length == 0);
+    const ndClauses = clauses.filter(({ chooseExprs }) => chooseExprs.length != 0);
 
     let accumulatedFacts: Facts = this.currentState;
     
     stOrder.forEach(stratum => {
-      let newTuplesCount = 0;
-      // debugger
-      let keysUpdated = [... accumulatedFacts.keys()];
+      const relevantDClauses = dClauses.filter(({ key }) => 
+      this.strata.vertices[stratum].includes(key));
+      const relevantNDClauses = ndClauses.filter(({ key }) => 
+      this.strata.vertices[stratum].includes(key));
       
+      let newDTuplesCount = 0;
+      let newNDTuplesCount = 0;
       do {
-        const relevantClauses = clauses.filter(({ key, deps }) => {
-          const depsWereUpdated = deps.some(dep => keysUpdated.includes(dep));
-          if (!this.strata.vertices[stratum]) debugger
-          const inCurrentStratum = this.strata.vertices[stratum].includes(key);
-          return inCurrentStratum && depsWereUpdated;
-        });
+        do {
+          const newFacts = produceFacts(relevantDClauses, accumulatedFacts);
+          const accumulatedFacts0 = mergeFactsDeep(accumulatedFacts, newFacts) as Facts;
+          newDTuplesCount = countUniqFacts(accumulatedFacts0) - countUniqFacts(accumulatedFacts);
+          accumulatedFacts = accumulatedFacts0;
+        } while (newDTuplesCount > 0);
 
-        const newFacts = produceFacts(relevantClauses, accumulatedFacts);
+        // at this point we deducted all facts that we could using deterministic clauses
+        // now we gonna make one pass on non-deterministic clauses
+        // if they produce anything, then we need to repeat cycle again
+        //
+        // Because we run only one pass on clauses with choose and then run the rest of
+        // deductive clauses in the loop, we provide more rows to choose from.
+        const newFacts = produceFacts(relevantNDClauses, accumulatedFacts);
         const accumulatedFacts0 = mergeFactsDeep(accumulatedFacts, newFacts) as Facts;
-        newTuplesCount = countUniqFacts(accumulatedFacts0) - countUniqFacts(accumulatedFacts);
+        newNDTuplesCount = countUniqFacts(accumulatedFacts0) - countUniqFacts(accumulatedFacts);
         accumulatedFacts = accumulatedFacts0;
-        // newTuplesCount = _.sum([...newFacts.values()].map(tuples => tuples.length));
-        keysUpdated = [...newFacts]
-          .filter(([_key, tuples]) => tuples.length != 0)
-          .map(([key, _tuples]) => key);
-        // debugger
-      } while (newTuplesCount > 0);
+      } while (newNDTuplesCount > 0);
     });
 // debugger
     this.deductedFacts = mergeFactsDeep(this.currentState, accumulatedFacts) as Facts;
