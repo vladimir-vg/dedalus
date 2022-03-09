@@ -1,0 +1,13 @@
+
+
+% @async should produce at tuple that will be available eventually
+% it may happen on next tick, on a bit later, or never.
+
+fact1(1, 2)@1;
+
+rule1(A, B)@async :- fact1(A, B);
+fact1(A, B)@next :- fact1(A, B);
+
+% eventually we should receive at least once async fact
+test_passed :-
+  rule1(1, 2);
