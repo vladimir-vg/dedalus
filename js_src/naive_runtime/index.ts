@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import hash from 'object-hash';
 
 import {
   Runtime, RuntimeOutputListener, TFacts, Facts, Program, Clause, Strata,
@@ -20,13 +21,15 @@ const produceFacts = (clauses: Clause[], inputFacts: Facts, choicesMade: any)
 : { facts: Facts, choicesMade: any } => {
   // Just walk all clauses one by one and produce all possible new facts
   // from given facts deductively
-  return clauses.reduce(({ facts: newFacts, choicesMade }, clause) => {
+  return clauses.reduce(({ facts: newFacts, choicesMade }, clause, index) => {
     // debugger
     const { key, params, bodyFacts, bodyConditions, chooseExprs } = clause;
     const positiveBodyFacts = bodyFacts.filter(({ isNegated }) => !isNegated);
     const negativeBodyFacts = bodyFacts.filter(({ isNegated }) => isNegated);
-    const positiveTables = positiveBodyFacts.map(({ key, params }) => Table.fromFacts(inputFacts, key, params));
-    const negativeTables = negativeBodyFacts.map(({ key, params }) => Table.fromFacts(inputFacts, key, params));
+    const positiveTables = positiveBodyFacts.map(({ key, params }) =>
+      Table.fromFacts(inputFacts, key, params));
+    const negativeTables = negativeBodyFacts.map(({ key, params }) =>
+      Table.fromFacts(inputFacts, key, params));
     const table0 = positiveTables.reduce((t1, t2) => t1.naturalJoin(t2));
     const table1 = table0.select(bodyConditions);
     const table2 = negativeTables.reduce((acc, t) => acc.antijoin(t), table1);
@@ -40,9 +43,10 @@ const produceFacts = (clauses: Clause[], inputFacts: Facts, choicesMade: any)
     // frequency of different outcomes. Just in case, shuffle.
     const chooseExprs1 = _.shuffle(chooseExprs);
     const choiceFn = (rows) => _.sample(rows);
+    const keyFn = (value) => hash([key, index, value]);
     const { table: table3, choicesMade: newChoicesMade } =
       chooseExprs1.reduce(({ table: accTable, choicesMade: accChoicesMade }, { keyVars, rowVars }) =>
-        accTable.groupAndChoose(keyVars, rowVars, accChoicesMade, choiceFn),
+        accTable.groupAndChoose(keyVars, rowVars, keyFn, accChoicesMade, choiceFn),
       { table: table2, choicesMade });
 
     const rows = table3.projectColumns(params);

@@ -261,16 +261,13 @@ const aggregateRows = (table, params) => {
 
 
 
-const groupAndChooseRows = (table, keyColumns, selectionColumns, choicesMade, chooseFn) => {
-  // TODO: remember choices for each clause separately. Right now all choices
-  // in different clauses (even with different names) are lumped together
-
+const groupAndChooseRows = (table, keyColumns, selectionColumns, keyFn, choicesMade, chooseFn) => {
   const choices: {[key: string]: {[key: string]: any[]}} = {};
   table.rows.forEach(row => {
     const groupValues = projectRowValues(row, table.columns, keyColumns);
     const rowValues = projectRowValues(row, table.columns, [...keyColumns, ...selectionColumns]);
-    const key1 = hash(groupValues);
-    const key2 = hash(rowValues);
+    const key1 = keyFn(groupValues); //  hash(groupValues);
+    const key2 = keyFn(rowValues); //hash(rowValues);
 
     // we already have chosen row for these keys during this tick before,
     // skip it
@@ -290,10 +287,10 @@ const groupAndChooseRows = (table, keyColumns, selectionColumns, choicesMade, ch
   const rows = [];
   table.rows.forEach(row => {
     const groupValues = projectRowValues(row, table.columns, keyColumns);
-    const key1 = hash(groupValues);
-    const expectedRowValues = newChoices[key1];
     const rowValues = projectRowValues(row, table.columns, [...keyColumns, ...selectionColumns]);
-    const key2 = hash(rowValues);
+    const key1 = keyFn(groupValues); // hash(groupValues);
+    const key2 = keyFn(rowValues); // hash(rowValues);
+    const expectedRowValues = newChoices[key1];
     
     if (_.isEqual(expectedRowValues, rowValues)) {
       newChoicesMade[key1] ??= {};
@@ -347,7 +344,7 @@ class Table {
     return this.naturalJoin(table2);
   }
 
-  groupAndChoose(keyColumns, selectionColumns, choicesMade, chooseFn) {
+  groupAndChoose(keyColumns, selectionColumns, keyFn, choicesMade, chooseFn) {
     const hasUnknownKVar = _.some(keyColumns, col => !this.columns.includes(col));
     const hasUnknownRVar = _.some(selectionColumns, col => !this.columns.includes(col));
     if (hasUnknownKVar) {
@@ -357,7 +354,7 @@ class Table {
       throw new Error(`Unexpected key variable ${JSON.stringify(selectionColumns)} from ${JSON.stringify(this.columns)}`);
     }
 
-    const { rows, choicesMade: newChoicesMade } = groupAndChooseRows(this, keyColumns, selectionColumns, choicesMade, chooseFn);
+    const { rows, choicesMade: newChoicesMade } = groupAndChooseRows(this, keyColumns, selectionColumns, keyFn, choicesMade, chooseFn);
     const table = new Table(this.columns, rows);
 
     return { table, choicesMade: newChoicesMade };
