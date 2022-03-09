@@ -18,6 +18,7 @@ test_passed :-
   top(-1);
 
 test_failed(A) :-
+  test_passed,
   top(A),
   A =/= 1,
   A =/= -1;

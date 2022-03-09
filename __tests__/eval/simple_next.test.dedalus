@@ -31,6 +31,7 @@ test_passed :-
   position(4);
 
 test_failed(P) :-
+  test_passed,
   % at very end, only single position must stay
   position(P),
   P =/= 4;

@@ -1,0 +1,56 @@
+edge(start,a)@1;
+edge(a,b)@1;
+edge(a,c)@1;
+edge(b,d)@1;
+edge(c,d)@1;
+edge(c,e)@1;
+edge(d,f)@1;
+edge(e,f)@1;
+
+selected_edge(start,a)@1;
+
+visited_node(A) :- selected_edge(A, _);
+visited_node(A) :- selected_edge(_, A);
+
+middle_of_the_path(A) :-
+  selected_edge(A, _);
+
+selected_edge(From, To)@next :- selected_edge(From, To);
+selected_edge(From, To)@next :-
+  edge(From, To),
+  notin visited_node(To),
+  % it is visited, but not in the middle of the path
+  % basically it means that it is the last selected node
+  visited_node(From),
+  notin middle_of_the_path(From),
+  % among all possibilities, choose only one
+  choose((From), (To));
+
+% there are only three possible paths for given graph.
+path1 :-
+  selected_edge(a,b),
+  selected_edge(b,d),
+  selected_edge(d,f);
+
+path2 :-
+  selected_edge(a,c),
+  selected_edge(c,d),
+  selected_edge(d,f);
+
+path3 :-
+  selected_edge(a,c),
+  selected_edge(c,e),
+  selected_edge(e,f);
+
+% pass only if one path was selected
+test_passed :- path1, notin path2, notin path3;
+test_passed :- notin path1, path2, notin path3;
+test_passed :- notin path1, notin path2, path3;
+
+% can't select two different edges from same starting point
+test_failed :-
+  selected_edge(a,b),
+  selected_edge(a,c);
+test_failed :-
+  selected_edge(c,d),
+  selected_edge(c,e);

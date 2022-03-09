@@ -62,13 +62,14 @@ const testcases = await findTestcases({
     // temporarly disabled tests, that require automatic stratification:
     // '__tests__/eval/negation.test.dedalus',
     // '__tests__/eval/var_ignored_in_negation.test.dedalus',
+    '__tests__/eval/several_choose_exprs.test.dedalus',
   ],
   only: [
     // if we want to run only particular tests (e.g. for debugging)
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    // '__tests__/eval/choose_from_two.test.dedalus',
+    '__tests__/eval/choice_with_next.test.dedalus',
   ],
 });
 
@@ -212,9 +213,9 @@ const runDedalusTest = async (inputFacts, matcherText, matcherPath, opts = {}) =
 
     const fixpointReached = await rt.isFixpointReached();
     testPassed = hasAtLeastOnePass && !hasAtLeastOneFailure;
-    testFailed = fixpointReached && !testPassed;
+    testFailed = (fixpointReached && !testPassed) || hasAtLeastOneFailure;
     if (noInduction) { break; }
-debugger
+// debugger
     if (testFailed || testPassed) { debugger; break; }
 
     await rt.tick();

@@ -1,0 +1,62 @@
+% LineName, StationName, OpeningYear, Depth
+metro("Sokolnicheskaya", "Bulvar Rokossovskogo", 1990, -8)@1;
+metro("Sokolnicheskaya", "Cherkizovskaya", 1990, -9)@1;
+metro("Sokolnicheskaya", "Preobrazhenskaya Ploshchad", 1965, -8)@1;
+metro("Sokolnicheskaya", "Sokolniki", 1935, -9)@1;
+metro("Zamoskvoretskaya", "Khovrino", 2017, -14)@1;
+metro("Zamoskvoretskaya", "Belomorskaya", 2018, -25)@1;
+metro("Filyovskaya", "Kuntsevskaya", 1965, 0)@1;
+metro("Filyovskaya", "Kutuzovskaya", 1958, 0)@1;
+metro("Filyovskaya", "Studencheskaya", 1958, 0)@1;
+
+
+foo :-
+  metro(Line, Station, Year, _Depth),
+  notin selected(Station),
+  choose((s));
+
+
+rule1(Line, Year, count<Station>):-
+  % group stations by line and year
+  metro(Line, Station, Year, _Depth),
+  choose((Line, Year), (Station));
+
+correct_grouping :-
+  rule1("Filyovskaya", 1958, 1),
+  rule1("Filyovskaya", 1965, 1),
+  rule1("Filyovskaya", 1965, 1),
+
+% rule2 :-
+%   metro(Line2, Station2, Year2, _Depth),
+%   choose((Line2, Year2), (Station2)),
+
+
+% What I want to test?
+%
+% Several choose statements in one clause.
+%
+% Check that if we make choices that exclude each other
+%
+%
+% Hm. I want to run non-deterministic clauses several times
+% and check that it always acts correctly
+%
+
+% Clauses in this test are not deterministic because they include
+% choose expression. It means that they may produce different result
+% for exactly same input. That's why it would be reasonable to run it several times
+% just in case
+
+times_to_run(10)@1;
+
+current_test_num(N)@next :- times_to_run(N);
+current_test_num(N)@next :-
+  N =/= 0,
+  current_test_num(N1)
+  successor(N, N1);
+
+% test_passed :-
+%   % all 
+%   current_test_num(0),
+%   times_to_run(N),
+
