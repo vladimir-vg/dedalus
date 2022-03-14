@@ -108,8 +108,9 @@ const transformBodyAtomExpr = (tables, bodyExpr, clauseId, gensym, filename) => 
       symArgs.push([exprId, argN+1, argToSymbol(arg)]);
     } else if (isVariable(arg)) {
       const { Variable: { location } } = arg;
+      const isIgnored = (arg.Variable.name[0] == '_');
       varArgs.push([
-        exprId, argN+1, argToSymbol(arg), boolToSymbol(location)
+        exprId, argN+1, argToSymbol(arg), boolToSymbol(location), boolToSymbol(isIgnored),
       ]);
     } else if (isInteger(arg)) { intArgs.push(tuple); }
     else if (isString(arg)) { strArgs.push(tuple); }
@@ -149,8 +150,9 @@ const transformBinaryPredicateExpr = (tables, bodyExpr, clauseId, gensym, filena
     const tuple = [exprId, argN+1, arg];
     if (isVariable(arg)) {
       const { location } = arg;
+      const isIgnored = (arg.Variable.name[0] == '_');
       varArgs.push([
-        exprId, argN+1, argToSymbol(arg), boolToSymbol(location)
+        exprId, argN+1, argToSymbol(arg), boolToSymbol(location), boolToSymbol(isIgnored),
       ]);
     }
     else if (isInteger(arg)) { intArgs.push(tuple); }

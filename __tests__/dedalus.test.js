@@ -68,7 +68,7 @@ const testcases = await findTestcases({
     // then we specify them here.
     //
     // if list is empty, then everything is run as usual
-    // '__tests__/eval/simple_async.test.dedalus',
+    // '__tests__/eval/var_ignored_in_negation.test.dedalus',
   ],
 });
 

@@ -8,14 +8,14 @@ test_passed :-
     ast_body_expr_location("./parser/broadcast.in.dedalus", _, ExprId1),
     ast_body_expr(ClauseId1, ExprId1),
     ast_body_atom(ExprId1, smessage, false),
-      ast_body_var_arg(ExprId1, 1, 'Agent', true),
-      ast_body_var_arg(ExprId1, 2, 'Sender', false),
-      ast_body_var_arg(ExprId1, 3, 'Message', false),
+      ast_body_var_arg(ExprId1, 1, 'Agent', true, false),
+      ast_body_var_arg(ExprId1, 2, 'Sender', false, false),
+      ast_body_var_arg(ExprId1, 3, 'Message', false, false),
     ast_body_expr_location("./parser/broadcast.in.dedalus", _, ExprId2),
     ast_body_expr(ClauseId1, ExprId2),
     ast_body_atom(ExprId2, members, false),
-      ast_body_var_arg(ExprId2, 1, 'Agent', true),
-      ast_body_var_arg(ExprId2, 2, 'Member', false),
+      ast_body_var_arg(ExprId2, 1, 'Agent', true, false),
+      ast_body_var_arg(ExprId2, 2, 'Member', false, false),
 
   ast_clause_location("./parser/broadcast.in.dedalus", _, ClauseId2),
   ast_clause(rdeliver, ClauseId2, '@next'),
@@ -26,7 +26,7 @@ test_passed :-
     ast_body_expr_location("./parser/broadcast.in.dedalus", _, ExprId3),
     ast_body_expr(ClauseId2, ExprId3),
     ast_body_atom(ExprId3, buf_bcast, false),
-      ast_body_var_arg(ExprId3, 1, 'Sender', false),
-      ast_body_var_arg(ExprId3, 2, 'Me', false),
-      ast_body_var_arg(ExprId3, 3, 'Message', false);
+      ast_body_var_arg(ExprId3, 1, 'Sender', false, false),
+      ast_body_var_arg(ExprId3, 2, 'Me', false, false),
+      ast_body_var_arg(ExprId3, 3, 'Message', false, false);
 

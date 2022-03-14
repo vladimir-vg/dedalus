@@ -10,6 +10,6 @@ test_passed :-
     ast_body_expr_location("./parser/various.in.dedalus", _L, ExprId1),
     ast_body_expr(ClauseId1, ExprId1),
     ast_body_atom(ExprId1, m_priority_queue, false),
-      ast_body_var_arg(ExprId1, 1, 'A', false),
-      ast_body_var_arg(ExprId1, 2, '_', false),
-      ast_body_var_arg(ExprId1, 3, 'C', false);
+      ast_body_var_arg(ExprId1, 1, 'A', false, false),
+      ast_body_var_arg(ExprId1, 2, '_', false, true),
+      ast_body_var_arg(ExprId1, 3, 'C', false, false);

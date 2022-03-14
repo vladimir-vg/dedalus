@@ -116,7 +116,7 @@
 
 % % information about arg used in body rule
 % % LocPrefix = true/false
-% ast_body_var_arg(ExprId, ArgN, VarName, LocPrefix)
+% ast_body_var_arg(ExprId, ArgN, VarName, LocPrefix, Ignored)
 % ast_body_int_arg(ExprId, ArgN, Value)
 % ast_body_sym_arg(ExprId, ArgN, Value)
 % ast_body_str_arg(ExprId, ArgN, Value)
@@ -229,7 +229,7 @@
 %   ast_clause(Filename, Line1, _Name, ClauseN, '@async'),
 %   ast_body_expr(Filename, Line2, ClauseN, RuleN),
 %   % okay, so there exist a variable with location prefix in body
-%   ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
+%   ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix, Ignored),
 %   LocPrefix = true,
  
 %   % all variables in negated rule must appear in positive rule
@@ -249,7 +249,7 @@
 %   ast_clause(Filename, _Line, _Name, ClauseN, Suffix),
 %   Suffix =/= '@async',
 %   ast_body_expr(Filename, Line, ClauseN, RuleN),
-%   ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix),
+%   ast_body_var_arg(ClauseN, RuleN, _ArgN, _VarName, LocPrefix, Ignored),
 %   LocPrefix = true;
 
 
@@ -335,7 +335,8 @@ err_range_unrestricted_variable(Filename, Line, VarName) :-
   notin var_present_in_positive(ClauseId, VarName);
 
 var_used_in_expr(ExprId, VarName) :-
-  ast_body_var_arg(ExprId, _ArgN, VarName, _LocPrefix);
+  ast_body_var_arg(ExprId, _ArgN, VarName, _LocPrefix, Ignored),
+  Ignored = false;
 
 var_present_in_positive(ClauseId, VarName) :-
   ast_body_expr(ClauseId, ExprId),
@@ -395,7 +396,7 @@ clause_arg(ClauseId, ArgN) :- ast_clause_str_arg(ClauseId, ArgN, _);
 clause_arg(ClauseId, ArgN) :- ast_clause_sym_arg(ClauseId, ArgN, _);
 clause_arg(ClauseId, ArgN) :- ast_clause_var_arg(ClauseId, ArgN, _, _, _);
 
-body_atom_arg(ExprId, ArgN) :- ast_body_var_arg(ExprId, ArgN, _, _);
+body_atom_arg(ExprId, ArgN) :- ast_body_var_arg(ExprId, ArgN, _, _, _);
 body_atom_arg(ExprId, ArgN) :- ast_body_int_arg(ExprId, ArgN, _);
 body_atom_arg(ExprId, ArgN) :- ast_body_sym_arg(ExprId, ArgN, _);
 body_atom_arg(ExprId, ArgN) :- ast_body_str_arg(ExprId, ArgN, _);
@@ -407,7 +408,7 @@ body_atom_arg(ExprId, ArgN) :- ast_body_str_arg(ExprId, ArgN, _);
 err_location_prefix_in_successor(Filename, Line, VarName) :-
   ast_body_expr_location(Filename, Line, ExprId),
   ast_body_atom(ExprId, successor, _Negated),
-  ast_body_var_arg(ExprId, _, VarName, LocPrefix),
+  ast_body_var_arg(ExprId, _, VarName, LocPrefix, _Ignored),
   LocPrefix = true;
 
 err_successor_wrong_arg_num(Filename, Line, N) :-

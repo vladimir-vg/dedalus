@@ -66,8 +66,8 @@ ast_atom(Name, AtomId, Timestamp)@next :-
   ast_atom(Name, AtomId, Timestamp);
 ast_clause_var_arg(ClauseId, ArgN, VarName, AggFunc, LocPrefix)@next :-
   ast_clause_var_arg(ClauseId, ArgN, VarName, AggFunc, LocPrefix);
-ast_body_var_arg(ExprId, ArgN, VarName, LocPrefix)@next :-
-  ast_body_var_arg(ExprId, ArgN, VarName, LocPrefix);
+ast_body_var_arg(ExprId, ArgN, VarName, LocPrefix, Ignored)@next :-
+  ast_body_var_arg(ExprId, ArgN, VarName, LocPrefix, Ignored);
 
 % Algorithm:
 % 1) find all leaf dependencies
@@ -103,7 +103,8 @@ aggregated_clause_var(ClauseId, VarName) :-
 body_atom_uses_var(ClauseId, Name, VarName) :-
   ast_body_expr(ClauseId, ExprId),
   ast_body_atom(ExprId, Name, Negated),
-  ast_body_var_arg(ExprId, _ArgN, VarName, _LocPrefix);
+  ast_body_var_arg(ExprId, _ArgN, VarName, _LocPrefix, Ignored),
+  Ignored = false;
 
 dependency(Name1, Name2, NeedStratumChange) :-
   negated_dependency(Name1, Name2),

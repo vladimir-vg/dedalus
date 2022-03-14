@@ -7,8 +7,8 @@ test_passed :-
     ast_body_expr_location("./parser/lamport_clock.in.dedalus", _L, ExprId1),
     ast_body_expr(ClauseId1, ExprId1),
     ast_body_atom(ExprId1, p, false),
-      ast_body_var_arg(ExprId1, 1, 'A', false),
-      ast_body_var_arg(ExprId1, 2, 'B', false),
+      ast_body_var_arg(ExprId1, 1, 'A', false, false),
+      ast_body_var_arg(ExprId1, 2, 'B', false, false),
 
   ast_clause_location("./parser/lamport_clock.in.dedalus", _L, ClauseId2),
   ast_clause(p_pos, ClauseId2, '@next'),
@@ -18,14 +18,14 @@ test_passed :-
     ast_body_expr_location("./parser/lamport_clock.in.dedalus", _L, ExprId2),
     ast_body_expr(ClauseId2, ExprId2),
     ast_body_atom(ExprId2, p_pos, false),
-      ast_body_var_arg(ExprId2, 1, 'A', false),
-      ast_body_var_arg(ExprId2, 2, 'B', false),
+      ast_body_var_arg(ExprId2, 1, 'A', false, false),
+      ast_body_var_arg(ExprId2, 2, 'B', false, false),
 
     ast_body_expr_location("./parser/lamport_clock.in.dedalus", _, ExprId3),
     ast_body_expr(ClauseId2, ExprId3),
     ast_body_atom(ExprId3, p_neg, true),
-      ast_body_var_arg(ExprId3, 1, 'A', false),
-      ast_body_var_arg(ExprId3, 2, 'B', false),
+      ast_body_var_arg(ExprId3, 1, 'A', false, false),
+      ast_body_var_arg(ExprId3, 2, 'B', false, false),
 
 
 
@@ -39,8 +39,8 @@ test_passed :-
     ast_body_expr_location("./parser/lamport_clock.in.dedalus", _, ExprId4),
     ast_body_expr(ClauseId3, ExprId4),
     ast_body_atom(ExprId4, q, false),
-      ast_body_var_arg(ExprId4, 1, 'A', false),
-      ast_body_var_arg(ExprId4, 2, 'B', false),
+      ast_body_var_arg(ExprId4, 1, 'A', false, false),
+      ast_body_var_arg(ExprId4, 2, 'B', false, false),
       ast_body_atom_var_time(ExprId4, 'N'),
 
   ast_clause_location("./parser/lamport_clock.in.dedalus", _L, ClauseId4),
@@ -52,16 +52,16 @@ test_passed :-
     ast_body_expr_location("./parser/lamport_clock.in.dedalus", _, ExprId5),
     ast_body_expr(ClauseId4, ExprId5),
     ast_body_atom(ExprId5, p_wait, false),
-      ast_body_var_arg(ExprId5, 1, 'A', false),
-      ast_body_var_arg(ExprId5, 2, 'B', false),
-      ast_body_var_arg(ExprId5, 3, 'N', false),
+      ast_body_var_arg(ExprId5, 1, 'A', false, false),
+      ast_body_var_arg(ExprId5, 2, 'B', false, false),
+      ast_body_var_arg(ExprId5, 3, 'N', false, false),
       ast_body_atom_var_time(ExprId5, 'M'),
     
     ast_body_expr_location("./parser/lamport_clock.in.dedalus", _, ExprId6),
     ast_body_expr(ClauseId4, ExprId6),
     ast_body_binop(ExprId6, '>='),
-      ast_body_var_arg(ExprId6, 1, 'N', false),
-      ast_body_var_arg(ExprId6, 2, 'M', false),
+      ast_body_var_arg(ExprId6, 1, 'N', false, false),
+      ast_body_var_arg(ExprId6, 2, 'M', false, false),
 
 
   ast_clause_location("./parser/lamport_clock.in.dedalus", _, ClauseId6),
@@ -72,13 +72,13 @@ test_passed :-
     ast_body_expr_location("./parser/lamport_clock.in.dedalus", _, ExprId7),
     ast_body_expr(ClauseId6, ExprId7),
     ast_body_atom(ExprId7, p_wait, false),
-      ast_body_var_arg(ExprId7, 1, 'A', false),
-      ast_body_var_arg(ExprId7, 2, 'B', false),
-      ast_body_var_arg(ExprId7, 3, 'N', false),
+      ast_body_var_arg(ExprId7, 1, 'A', false, false),
+      ast_body_var_arg(ExprId7, 2, 'B', false, false),
+      ast_body_var_arg(ExprId7, 3, 'N', false, false),
       ast_body_atom_var_time(ExprId7, 'M'),
     
     ast_body_expr_location("./parser/lamport_clock.in.dedalus", _, ExprId8),
     ast_body_expr(ClauseId6, ExprId8),
     ast_body_binop(ExprId8, '<'),
-      ast_body_var_arg(ExprId8, 1, 'N', false),
-      ast_body_var_arg(ExprId8, 2, 'M', false);
+      ast_body_var_arg(ExprId8, 1, 'N', false, false),
+      ast_body_var_arg(ExprId8, 2, 'M', false, false);

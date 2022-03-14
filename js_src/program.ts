@@ -12,7 +12,7 @@ const collectExprArgs = (astFacts, exprId) => {
   const params = collectListFromFacts(astFacts, {
     'ast_body_var_arg': {
       keep,
-      getPair: ([id, index, name, locPrefix]) =>
+      getPair: ([_id, index, name, _locPrefix, _ignored]) =>
         [index, { variable: name['symbol'] }]
     },
     'ast_body_int_arg': { keep, getPair: getPairSimpleValue },

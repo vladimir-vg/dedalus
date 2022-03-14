@@ -137,7 +137,7 @@ const prettyPrintBodyExpr = (astFacts, exprId, isLastExpr) => {
       keep, getPair: ([id, index, value]) => [index, ppStr(value)]
     },
     'ast_body_var_arg': {
-      keep, getPair: ([id, index, name, locPrefix]) =>
+      keep, getPair: ([_id, index, name, locPrefix, _ignored]) =>
       [index, ppVar({ name, locPrefix })]
     },
   });
