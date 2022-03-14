@@ -1,0 +1,139 @@
+% This code infers types of the fields in atoms
+% and checks whether they are consistent
+%
+% type(Name, N, Type)
+
+
+
+err_inconsistent_type(Name, N) :-
+  types_count(Name, N, Count),
+  Count =/= 1;
+
+err_unknown_type(Name, N) :-
+  field(Name, N),
+  notin types_count(Name, N, _Count);
+
+types_count(Name, N, count<Type>) :-
+  type(Name, N, Type);
+
+
+
+% initial facts
+type(Name, N, integer) :-
+  ast_atom(Name, AtomId, _Timestamp),
+  ast_atom_int_arg(AtomId, N, _Value);
+type(Name, N, symbol) :-
+  ast_atom(Name, AtomId, _Timestamp),
+  ast_atom_sym_arg(AtomId, N, _Value);
+type(Name, N, string) :-
+  ast_atom(Name, AtomId, _Timestamp),
+  ast_atom_str_arg(AtomId, N, _Value);
+% clauses
+type(Name, N, integer) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  ast_clause_int_arg(ClauseId, N, _Value);
+type(Name, N, symbol) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  ast_clause_sym_arg(ClauseId, N, _Value);
+type(Name, N, string) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  ast_clause_str_arg(ClauseId, N, _Value);
+% if type was assigned to the variable
+% then all atom that have this variable
+% must have same type
+type(Name, N, Type) :-
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_atom(ExprId, Name, _Negated),
+  ast_body_var_arg(ExprId, N, VarName, _LocPrefix, _Ignored);
+  var_type(ClauseId, VarName, Type);
+% if type was assigned to the variable
+% and variable is in the head of the clause
+% then it should have same type
+type(Name, N, Type) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  ast_clause_var_arg(ClauseId, N, VarName, AggFunc, _LocPrefix),
+  AggFunc = none,
+  var_type(ClauseId, VarName, Type);
+% if numeric aggregation function is used in the head
+% then type for the field in the result is integer
+type(Name, N, integer) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  ast_clause_var_arg(ClauseId, N, _VarName, AggFunc, _LocPrefix),
+  integer_result_aggregation_func(AggFunc);
+
+
+
+% if var was used in successor,
+% then this variable must be integer
+var_type(ClauseId, VarName, integer) :-
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_atom(ExprId, successor, _Negated),
+  ast_body_var_arg(ExprId, _ArgN, Var, _LocPrefix, _Ignored);
+% if var was used in comparison operators
+% then this variable must be an integer
+var_type(ClauseId, VarName, integer) :-
+  ast_body_expr(ClauseId, ExprId),
+  ast_body_binop(ExprId, Op),
+  number_comparison_op(Op),
+  ast_body_var_arg(ExprId, _ArgN, VarName, _LocPrefix, _Ignored);
+% if aggregation function that expects integer input used
+% then provided variable must have integer type
+var_type(ClauseId, VarName, integer) :-
+  ast_clause_var_arg(ClauseId, _N, VarName, AggFunc, _LocPrefix),
+  integer_arg_aggregation_func(AggFunc);
+
+
+
+% 'field' indicates that N-th field for given Name tuple exists.
+% it helps to detect fields in the tuple that don't have assigned type
+field(Name, N) :-
+  ast_atom(Name, AtomId, _Timestamp),
+  ast_atom_int_arg(AtomId, N, _Value);
+field(Name, N) :-
+  ast_atom(Name, AtomId, _Timestamp),
+  ast_atom_str_arg(AtomId, N, _Value);
+field(Name, N) :-
+  ast_atom(Name, AtomId, _Timestamp),
+  ast_atom_sym_arg(AtomId, N, _Value);
+
+field(Name, N) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  ast_clause_var_arg(ClauseId, N, _VarName, _AggFunc, _LocPrefix);
+field(Name, N) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  ast_clause_int_arg(ClauseId, N, _Value);
+field(Name, N) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  ast_clause_str_arg(ClauseId, N, _Value);
+field(Name, N) :-
+  ast_clause(Name, ClauseId, _Suffix),
+  ast_clause_sym_arg(ClauseId, N, _Value);
+
+field(Name, N) :-
+  ast_body_atom(ExprId, Name, _Negated),
+  ast_body_var_arg(ExprId, N, _VarName, _LocPrefix, _Ignored);
+field(Name, N) :-
+  ast_body_atom(ExprId, Name, _Negated),
+  ast_body_int_arg(ExprId, N, _Value);
+field(Name, N) :-
+  ast_body_atom(ExprId, Name, _Negated),
+  ast_body_sym_arg(ExprId, N, _Value);
+field(Name, N) :-
+  ast_body_atom(ExprId, Name, _Negated),
+  ast_body_str_arg(ExprId, N, _Value);
+
+
+
+number_comparison_op('<');
+number_comparison_op('>');
+number_comparison_op('>=');
+number_comparison_op('=<');
+
+integer_result_aggregation_func(min);
+integer_result_aggregation_func(max);
+integer_result_aggregation_func(sum);
+integer_result_aggregation_func(count);
+
+integer_arg_aggregation_func(min);
+integer_arg_aggregation_func(max);
+integer_arg_aggregation_func(sum);
