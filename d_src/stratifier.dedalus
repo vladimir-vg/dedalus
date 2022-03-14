@@ -188,7 +188,6 @@ has_bad_dependencies(Name) :-
   has_bad_dependency(Name, _Child);
 
 has_bad_dependency(Name, Child) :-
-  notin cycle(Name),
   dependency(Name, Child, NeedStratumChange),
   NeedStratumChange = true,
   notin already_assigned(Child);
@@ -198,8 +197,6 @@ has_bad_dependency(Name, Child) :-
   NeedStratumChange = false,
   has_bad_dependencies(Child);
 
-% TODO: fix cycled dependencies stratification
-% right now it clearly doesn't work properly
 has_bad_dependency(Name, Child) :-
   % if rule is in cycle, then we count only
   % dependencies that do not belong to cycle
