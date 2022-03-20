@@ -10,7 +10,7 @@ Parsing is done via PEG grammar.
 
 Validation consists is mostly of pattern matching, thus it is really convenient to do it in a language like Dedalus. That's why validator of Dedalus AST is written in Dedalus itself: [d_src/validator.dedalus](d_src/validator.dedalus).
 
-Use of negation and aggregation requires stratification of the clauses in the source code. We need to compute proper order of execution that would allow to use aggregation and stratification without loss of monotonicity. The code that performs this stratification process of Dedalus clauses is also implemented in Dedalus: [d_src/stratificator.dedalus](d_src/stratificator.dedalus).
+Use of negation and aggregation requires stratification of the clauses in the source code. We need to compute proper order of execution that would allow to use aggregation and stratification without loss of monotonicity. The code that performs this stratification process of Dedalus clauses is also implemented in Dedalus: [d_src/stratifier.dedalus](d_src/stratifier.dedalus).
 
 Evaluation itself is done in a naive bottom-to-top approach:
 
@@ -35,10 +35,6 @@ Choice operator just randomly selects a row from given set of possibilities. Mad
 # Testing
 
 In order to run tests, install dependencies `npm install` and then hit `make test`. Testscases themselves are just Dedalus programs.
-
-# Things to remember
-
- * "The constraints we imposed on Dedalus0 rules restrict how deductions may be made with respect to time. First,rules may only refer to a single time suffix variable in their body, and hence cannot join across different “timesteps”. Second, rules may specify deductions that occur concurrently with their ground facts or in the next timestep—in Dedalus0 , we rule out induction “backwards” in time or “skipping” into the future" (q) Dedalus paper, page 5
 
 # Related projects
 
