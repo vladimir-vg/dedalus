@@ -1,0 +1,46 @@
+
+just_started(9)@10.
+
+% all these timers will be started at timestamp=10
+rt:start_timer(#timers, 0, timer1, T)@async :- just_started@T.
+rt:start_timer(#timers, 1, timer2, T)@async :- just_started@T.
+rt:start_timer(#timers, 10, timer3, T)@async :-
+  just_started(X),
+  successor(X, T).
+rt:start_timer(#timers, 100, timer4, 10)@async.
+
+
+
+timer_fired_after_start(Tag)@next :- timer_fired_after_start(Tag).
+timer_fired_after_start(Tag)@next :-
+  % here we make sure that timer_started
+  % and timer_fired were delivered on
+  % different ticks
+  timer_started(Tag),
+  rt:timer_fired(Tag, 10).
+
+timer_started(Tag)@next :- timer_started(Tag).
+timer_started(Tag)@next :- rt:timer_started(Tag, 10).
+
+% remember sequence in which timers did fire
+fired_after(BeforeTag, AfterTag)@next :-
+  fired_after(BeforeTag, AfterTag).
+fired_after(BeforeTag, AfterTag) :-
+  timer_fired_after_start(BeforeTag),
+  rt:timer_fired(AfterTag, 10).
+
+test_passed :-
+  timer_fired_after_start(timer1),
+  timer_fired_after_start(timer2),
+  timer_fired_after_start(timer3),
+  timer_fired_after_start(timer4),
+
+  % with timer1 and timer2 ordering is not clear
+  % since durations 0 and 1.
+  % However, 10 milliseconds, is big enough difference,
+  % so we can check others.
+  fired_after(timer1, timer3),
+  fired_after(timer2, timer3),
+  fired_after(timer1, timer4),
+  fired_after(timer2, timer4),
+  fired_after(timer3, timer4).
