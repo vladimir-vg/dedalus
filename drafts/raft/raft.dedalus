@@ -1,0 +1,128 @@
+node(0, "/ip4/127.0.0.1/udp/5000")@0.
+node(1, "/ip4/127.0.0.1/udp/5001")@0.
+node(2, "/ip4/127.0.0.1/udp/5002")@0.
+node(3, "/ip4/127.0.0.1/udp/5003")@0.
+node(4, "/ip4/127.0.0.1/udp/5004")@0.
+node(NodeId, Addr)@next :- node(NodeId, Addr).
+
+% initially every node starts as a follower with term=0
+% TODO: really inconvenient to hardcode node_id here.
+% better to find a way to read environment variables somehow (readonly)
+this_node(4, 0, follower)@0.
+
+
+
+rt:start_timer(#timers, ElectionDurationMs, election, T)@async :-
+  % TODO: make a request to runtime to get random number, between 150 and 300
+  ElectionDurationMs = 150,
+  this_node(_NodeId, _Term, follower)@T,
+  notin running_timer(election, _).
+rt:start_timer(#timers, ElectionDurationMs, election, T)@async :-
+  ElectionDurationMs = 150,
+  this_node(_NodeId, _Term, candidate)@T,
+  notin running_timer(election, _).
+
+running_timer(Tag, T)@next :-
+  running_timer(Tag, T),
+  notin rt:timer_fired(Tag, T),
+  notin rt:timer_cancelled(Tag, T).
+running_timer(election, T) :-
+  rt:timer_started(election, T).
+
+
+
+this_node(NodeId, Term, candidate)@next :-
+  this_node(NodeId, PrevTerm, follower),
+  successor(PrevTerm, Term),
+  rt:timer_fired(election, _).
+
+this_node(NodeId, Term, follower)@next :-
+  this_node(NodeId, Term, follower),
+  notin rt:timer_fired(election, _).
+
+
+
+% vote requests are sent immediately
+% on the next tick after getting status
+% of a candidate
+
+vote_requests_sent@next :- vote_requests_sent.
+vote_requests_sent@next :- this_node(NodeId, Term, candidate).
+
+% This tuple will be sent only once per term,
+% on the first tick as a candidate.
+% This tuple corresponds to RequestVote in Raft paper
+request_vote(#VoterAddr, CandidateId, CandidateTerm)@async :-
+  node(VoterId, VoterAddr),
+  this_node(CandidateId, CandidateTerm, candidate),
+  VoterId =/= CandidateId,
+  notin vote_requests_sent.
+
+% We may receive several vote requests on single tick.
+% If we have equality eligible candidates,
+% then we should choose one non-deterministically
+% using choose() expression.
+%
+% Also, if term of the candidate is higher than current term,
+% we should transition to follower.
+%
+% Algorithm:
+% 1) Select vote requests with max term (could be one or more)
+% 2) If max term is higher than current term, then vote for it, transition to follower
+% 3) If max term is equal to current term, and current term is follower then vote if haven't voted before.
+% 4) Otherwise, reject vote.
+
+
+
+
+
+
+
+
+% vote_response(#CandidateAddr, VoterId, VoterTerm, Decision)@async :-
+%   node(CandidateAddr, CandidateId),
+%   this_node(VoterId, VoterTerm, _State),
+%   Decision = true,
+%   vote_request_decision(Decision, CandidateId),
+%   choosen_candidate_to_vote_for(CandidateId).
+% vote_response(#CandidateAddr, VoterId, VoterTerm, Decision)@async :-
+%   node(CandidateAddr, CandidateId),
+%   this_node(VoterId, VoterTerm, _State),
+%   vote_request_decision(_Decision, CandidateId),
+%   notin choosen_candidate_to_vote_for(CandidateId),
+%   Decision = false.
+
+% % unlikely, but still possible that we get
+% % several equality valid vote requests at the same tick
+% % let's non-deterministically choose one
+% choosen_candidate_to_vote_for(CandidateId) :-
+%   vote_request_decision(true, CandidateId),
+%   choose((), (CandidateId)).
+
+% vote_request_decision(Decision, CandidateId) :-
+%   this_node(_VoterId, VoterTerm, _State),
+%   request_vote(_VoterAddr, CandidateId, CandidateTerm),
+%   CandidateTerm < VoterTerm,
+%   Decision = false.
+% vote_request_decision(Decision, CandidateId) :-
+%   this_node(_VoterId, VoterTerm, _State),
+%   request_vote(_VoterAddr, CandidateId, CandidateTerm),
+%   CandidateTerm = VoterTerm,
+%   notin voted,
+%   Decision = true.
+% vote_request_decision(Decision, CandidateId) :-
+%   higher_term_vote_request(CandidateId, _CandidateTerm),
+%   Decision = true.
+
+% voted :- voted_for(_CandidateId).
+
+% % voted_for is saved on next tick after receiving vote request
+% voted_for(CandidateId)@next :- voted_for(CandidateId), notin clear_voted_for.
+% voted_for(CandidateId)@next :- higher_term_vote_request(CandidateId, _CandidateTerm).
+% voted_for(CandidateId)@next :- vote_request_decision(true, CandidateId).
+% clear_voted_for :- higher_term_vote_request(_CandidateId, _CandidateTerm).
+
+% higher_term_vote_request(CandidateId, CandidateTerm) :-
+%   this_node(_VoterId, VoterTerm, _State),
+%   request_vote(_OurAddr, CandidateId, CandidateTerm),
+%   VoterTerm < CandidateTerm.

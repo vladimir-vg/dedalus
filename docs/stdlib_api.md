@@ -1,4 +1,4 @@
-All response tuples from stdlib runtime are sent once, on next tick or later. `rt:` is just a prefix for the fact name. It brings to change to the Dedalus semantics.
+All response tuples from stdlib runtime are sent once, on next tick or later. `rt:` is just a prefix for the tuple name. It brings no change to the Dedalus semantics. It seems reasonable to use tuples without prefixes only between nodes of the same kind.
 
 # Timers
 
@@ -14,13 +14,13 @@ at t=N  -> rt:start_timer(timers, DurationMs, Tag, N)
 at t=N  -> rt:start_timer(timers, DurationMs, Tag, N)
         <- rt:timer_started(Tag, N)
         -> rt:cancel_timer(timers, Tag, N)
-        <- rt:timer_canceled(Tag, N)
+        <- rt:timer_cancelled(Tag, N)
 ```
 
 ```
 at t=N  -> rt:start_timer(timers, DurationMs, Tag, N)
         -> rt:cancel_timer(timers, Tag, N)
-        <- rt:timer_canceled(Tag, N)
+        <- rt:timer_cancelled(Tag, N)
 ```
 
 According to Dedalus semantics `rt:start_timer(...)` tuple not necessairly will be received on next tick. If we do computation in batches (accumulate tuples to send for several ticks, and only then do IO) that indeed may happen.

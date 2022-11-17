@@ -16,7 +16,7 @@ Evaluation itself is done in a naive bottom-to-top approach:
 
  1. Initially current state is an empty set. Initial timestamp is set to the minimal timestamp in the source code.
  2. If there are facts in the source code for current timestamp -- merge them into state. 
- 3. If there are facts in the input queue delivered by @async clauses -- merge them into state.
+ 3. If there are facts in the input queue delivered by `@async` clauses -- merge them into state.
  4. For each stratum:
 
     4.1. Select deductive clauses without choice-operators, apply them to current state and merge results to the current state till fixpoint.
