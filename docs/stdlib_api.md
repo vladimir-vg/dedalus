@@ -29,8 +29,15 @@ Field `N` in `rt:start_timer(timers, DurationMs, Tag, N)` must be unique for eve
 
 To implement that, runtime needs to distinguish (`Tag`, `N`) pairs that were served before and not. We could just remember all ids that were already used, but that's bad idea: allocating memory and doing lookups for such a simple thing would be unwise.
 
-Simple solution: we require that `N` MUST be equal to the current timestamp when `rt:start_timer(...)@async` is computed.
+Simple solution: we require that `N` MUST be equal to the current timestamp when `rt:start_timer(...)@async` is computed. This way we can guarantee that (`Tag`, `N`) won't be used twice.
 
-This way we can guarantee that (`Tag`, `N`) won't be used twice.
+Drawback: we start only one timer per `Tag` for a single tick. Doesn't look like a problem.
 
 For convenience, we guarantee that `rt:timer_started(...)` and `rt:timer_fired(...)` are always delivered on different ticks, even if `DurationMs` is zero.
+
+**TODO**: Specify the type of `Tag`. For now it is expected to be a symbol, however, it might be more reasonable to use bytestring. If we add aggregate function to compute hashes of sets of facts as bytestrings, then these hashes might be reasonble to be used as timer tags.
+
+# TODO
+
+ * Random integer in range request.
+ * Reading constant env variables specified at startup. Should they be typed? Parsed on request?

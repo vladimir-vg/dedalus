@@ -31,16 +31,23 @@ running_timer(election, T) :-
 
 
 
+this_node(NodeId, Term, follower)@next :-
+  higher_term_vote_request(_CandidateId, Term),
+  this_node(NodeId, _PrevTerm, _State).
+
 this_node(NodeId, Term, candidate)@next :-
+  notin higher_term_vote_request(_CandidateId, _Term),
+  rt:timer_fired(election, _),
   this_node(NodeId, PrevTerm, follower),
-  successor(PrevTerm, Term),
-  rt:timer_fired(election, _).
+  successor(PrevTerm, Term).
 
 this_node(NodeId, Term, follower)@next :-
-  this_node(NodeId, Term, follower),
-  notin rt:timer_fired(election, _).
+  notin higher_term_vote_request(_CandidateId, _Term),
+  notin rt:timer_fired(election, _),
+  this_node(NodeId, Term, follower).
 
-
+% voted_for(NodeId) :-
+%   rt:timer_fired(election, _)
 
 % vote requests are sent immediately
 % on the next tick after getting status
@@ -58,6 +65,8 @@ request_vote(#VoterAddr, CandidateId, CandidateTerm)@async :-
   VoterId =/= CandidateId,
   notin vote_requests_sent.
 
+
+
 % We may receive several vote requests on single tick.
 % If we have equality eligible candidates,
 % then we should choose one non-deterministically
@@ -66,63 +75,112 @@ request_vote(#VoterAddr, CandidateId, CandidateTerm)@async :-
 % Also, if term of the candidate is higher than current term,
 % we should transition to follower.
 %
+% What if start election timer fired exactly on the same tick
+% as request_vote arrived? We should prioritise ourself,
+% but only if term numbers are equal.
+%
 % Algorithm:
 % 1) Select vote requests with max term (could be one or more)
 % 2) If max term is higher than current term, then vote for it, transition to follower
 % 3) If max term is equal to current term, and current term is follower then vote if haven't voted before.
 % 4) Otherwise, reject vote.
 
+% in case if election timer trigger event
+% arrived at the same tick with request_vote
+% we need to consider both options.
+%
+% For consistency, let's construct request_vote tuple,
+% as if we tried to vote for ourselves.
+% It is easier to compare candidates' terms this way.
+request_vote(VoterAddr, CandidateId, NextTerm) :-
+  this_node(CandidateId, PrevTerm, follower),
+  node(CandidateId, CandidateAddr),
+  VoterAddr = CandidateAddr,
+  rt:timer_fired(election, _),
+  successor(PrevTerm, NextTerm).
+
+request_vote_max_term(max<CandidateTerm>) :-
+  request_vote(_VoterAddr, _CandidateId, CandidateTerm).
 
 
 
+% Only one among these three tuples must be present at the same time:
+failure:vote_request_choices_not_disjoint@async :-
+  higher_term_vote_request(_, _),
+  same_term_remote_vote_request(_, _).
+failure:vote_request_choices_not_disjoint@async :-
+  higher_term_vote_request(_, _),
+  same_term_self_vote_request(_, _).
+failure:vote_request_choices_not_disjoint@async :-
+  same_term_self_vote_request(_, _),
+  same_term_remote_vote_request(_, _).
+
+higher_term_vote_request(CandidateId, MaxTerm) :-
+  this_node(_VoterId, VoterTerm, _State),
+  request_vote_max_term(MaxTerm)
+  request_vote(_OurAddr, CandidateId, MaxTerm),
+  VoterTerm < MaxTerm,
+  choose((), (CandidateId)).
+
+same_term_remote_vote_request(CandidateId, CandidateTerm) :-
+  CandidateId =/= VoterId,
+  CandidateTerm = VoterTerm,
+  this_node(VoterId, VoterTerm, follower),
+  request_vote_max_term(CandidateTerm)
+  request_vote(_OurAddr, CandidateId, CandidateTerm),
+  notin voted_for(_, CandidateTerm),
+  choose((), (CandidateId)).
+
+same_term_self_vote_request(CandidateId, CandidateTerm) :-
+  CandidateId = VoterId,
+  CandidateTerm = VoterTerm,
+  this_node(VoterId, VoterTerm, follower),
+  request_vote_max_term(CandidateTerm)
+  request_vote(_OurAddr, CandidateId, CandidateTerm),
+  notin voted_for(_, CandidateTerm),
+  choose((), (CandidateId)).
 
 
 
+voted_for(CandidateId, ElectionTerm)@next :-
+  same_term_self_vote_request(CandidateId, ElectionTerm),
+  notin higher_term_vote_request(_, _),
+  notin same_term_remote_vote_request(_, _),
+  notin voted_for(_, ElectionTerm).
+voted_for(CandidateId, ElectionTerm)@next :-
+  same_term_remote_vote_request(CandidateId, ElectionTerm),
+  notin same_term_self_vote_request(_, _),
+  notin higher_term_vote_request(_, _),
+  notin voted_for(_, ElectionTerm).
+voted_for(CandidateId, ElectionTerm)@next :-
+  higher_term_vote_request(CandidateId, ElectionTerm),
+  notin higher_term_vote_request(_, _),
+  notin same_term_remote_vote_request(_, _).
+voted_for(CandidateId, ElectionTerm)@next :-
+  % keep voted_for fact only during its election term
+  this_node(_NodeId, ElectionTerm, _State),
+  voted_for(CandidateId, ElectionTerm),
+  notin same_term_vote_request(_),
+  notin higher_term_vote_request(_),
+  notin same_term_self_vote_request(_).
 
-% vote_response(#CandidateAddr, VoterId, VoterTerm, Decision)@async :-
-%   node(CandidateAddr, CandidateId),
-%   this_node(VoterId, VoterTerm, _State),
-%   Decision = true,
-%   vote_request_decision(Decision, CandidateId),
-%   choosen_candidate_to_vote_for(CandidateId).
-% vote_response(#CandidateAddr, VoterId, VoterTerm, Decision)@async :-
-%   node(CandidateAddr, CandidateId),
-%   this_node(VoterId, VoterTerm, _State),
-%   vote_request_decision(_Decision, CandidateId),
-%   notin choosen_candidate_to_vote_for(CandidateId),
-%   Decision = false.
 
-% % unlikely, but still possible that we get
-% % several equality valid vote requests at the same tick
-% % let's non-deterministically choose one
-% choosen_candidate_to_vote_for(CandidateId) :-
-%   vote_request_decision(true, CandidateId),
-%   choose((), (CandidateId)).
 
-% vote_request_decision(Decision, CandidateId) :-
-%   this_node(_VoterId, VoterTerm, _State),
-%   request_vote(_VoterAddr, CandidateId, CandidateTerm),
-%   CandidateTerm < VoterTerm,
-%   Decision = false.
-% vote_request_decision(Decision, CandidateId) :-
-%   this_node(_VoterId, VoterTerm, _State),
-%   request_vote(_VoterAddr, CandidateId, CandidateTerm),
-%   CandidateTerm = VoterTerm,
-%   notin voted,
-%   Decision = true.
-% vote_request_decision(Decision, CandidateId) :-
-%   higher_term_vote_request(CandidateId, _CandidateTerm),
-%   Decision = true.
+vote_response(#CandidateAddr, VoterId, VoterTerm, Decision)@async :-
+  request_vote(_OurAddr, CandidateId, CandidateTerm),
+  node(CandidateAddr, CandidateId),
+  this_node(VoterId, VoterTerm, _State),
+  % check that this is not the request vote tuple that
+  % we constructed artificially for consistency
+  CandidateId =/= VoterId,
+  voted_for(CandidateId, CandidateTerm),
+  Decision = true.
+vote_response(#CandidateAddr, VoterId, VoterTerm, Decision)@async :-
+  request_vote(_OurAddr, CandidateId, CandidateTerm),
+  node(CandidateAddr, CandidateId),
+  this_node(VoterId, _Term, _State),
+  CandidateId =/= VoterId,
+  notin voted_for(CandidateId, CandidateTerm),
+  Decision = false.
+  
 
-% voted :- voted_for(_CandidateId).
-
-% % voted_for is saved on next tick after receiving vote request
-% voted_for(CandidateId)@next :- voted_for(CandidateId), notin clear_voted_for.
-% voted_for(CandidateId)@next :- higher_term_vote_request(CandidateId, _CandidateTerm).
-% voted_for(CandidateId)@next :- vote_request_decision(true, CandidateId).
-% clear_voted_for :- higher_term_vote_request(_CandidateId, _CandidateTerm).
-
-% higher_term_vote_request(CandidateId, CandidateTerm) :-
-%   this_node(_VoterId, VoterTerm, _State),
-%   request_vote(_OurAddr, CandidateId, CandidateTerm),
-%   VoterTerm < CandidateTerm.
