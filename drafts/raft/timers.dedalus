@@ -1,0 +1,99 @@
+%
+% helper rules to work with #timers
+% it is still possible to work with stdlib API directly.
+%
+
+used_timer_id(Tag, N) :- rt:timer_started(Tag, N).
+used_timer_id(Tag, N) :- rt:timer_cancelled(Tag, N).
+used_timer_id(Tag, N) :- rt:timer_fired(Tag, N).
+used_timer_id(Tag, N) :- setting_up_timer(Tag, N).
+
+max_used_timer_id(Tag, max<N>) :-
+  used_timer_id(Tag, N).
+
+next_timer_id(Tag, N)@next :-
+  notin next_timer_id(Tag, _),
+  N = 0.
+next_timer_id(Tag, N)@next :-
+  next_timer_id(Tag, N),
+  notin max_used_timer_id(Tag, _).
+next_timer_id(Tag, N)@next :-
+  next_timer_id(Tag, N),
+  max_used_timer_id(Tag, UsedN),
+  UsedN =< N.
+next_timer_id(Tag, NextN)@next :-
+  next_timer_id(Tag, N),
+  max_used_timer_id(Tag, UsedN),
+  N < UsedN,
+  successor(UsedN, NextN).
+
+% setting_up_timer tuple indicates that node should
+% or already have sent rt:start_timer tuple.
+% we constantly send rt:start_timer while setting_up_timer is true
+% until we get confirmation that it started
+setting_up_timer(Tag, N)@next :-
+  notin setting_up_timer(Tag, _),
+  next_timer_id(Tag, N),
+  % you cannot try to cancel and start at the same time
+  % first cancel, then start
+  notin need_to_cancel_timer(Tag),
+  need_to_start_timer(Tag).
+setting_up_timer(Tag, N)@next :-
+  setting_up_timer(Tag, N),
+  notin need_to_cancel_timer(Tag),
+  notin rt:timer_started(Tag, N),
+  notin rt:timer_cancelled(Tag, N).
+
+rt:start_timer(#timers, Duration, Tag, N)@async :-
+  setting_up_timer(Tag, N),
+  timer_duration(Tag, Duration).
+
+running_timer(Tag, T)@next :-
+  running_timer(Tag, N),
+  notin rt:timer_fired(Tag, N),
+  notin rt:timer_cancelled(Tag, N).
+running_timer(Tag, N) :-
+  rt:timer_started(Tag, N).
+
+rt:cancel_timer(#timers, Tag, T)@async :-
+  need_to_cancel_timer(Tag).
+
+cancelled_timer(Tag, N) :-
+  need_to_cancel_timer(Tag),
+  running_timer(Tag, N).
+cancelled_timer(Tag, N)@next :-
+  cancelled_timer(Tag, N),
+  % how long we need to remember that timer is cancelled
+  % and that its firing is not valid?
+  % Until new timer for same tag is started.
+  notin setting_up_timer(Tag, _).
+
+
+
+% Use this rule to learn that timer
+% that was not cancelled before just fired
+timer_fired(Tag) :-
+  rt:timer_fired(Tag, N),
+  notin cancelled_timer(Tag, N).
+
+
+
+% User level API
+%
+% User needs to define following deductive rules
+% for Tag of his choosing:
+%
+% need_to_start_timer(Tag)
+%   Once this fact is produced, Timer request is sent.
+%
+% timer_duration(Tag, DurationMs)
+%   This fact must be present
+%   together with need_to_start_timer(Tag)
+%   in order for timer to start
+%
+% Optional:
+% need_to_cancel_timer(Tag)
+%   Once produced, any currently starting or already running timer
+%   will be cancelled.
+%
+% Once timer is fired, timer_fired(Tag) fact would be produced.

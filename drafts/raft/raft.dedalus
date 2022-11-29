@@ -10,24 +10,33 @@ node(NodeId, Addr)@next :- node(NodeId, Addr).
 % better to find a way to read environment variables somehow (readonly)
 this_node(4, 0, follower)@0.
 
+%
+% Domain specific rules for timers:
+%
 
-
-rt:start_timer(#timers, ElectionDurationMs, election, T)@async :-
-  % TODO: make a request to runtime to get random number, between 150 and 300
-  ElectionDurationMs = 150,
-  this_node(_NodeId, _Term, follower)@T,
+need_to_start_timer(election) :-
+  this_node(_NodeId, _Term, follower),
   notin running_timer(election, _).
-rt:start_timer(#timers, ElectionDurationMs, election, T)@async :-
-  ElectionDurationMs = 150,
-  this_node(_NodeId, _Term, candidate)@T,
+need_to_start_timer(election) :-
+  this_node(_NodeId, _Term, candidate),
   notin running_timer(election, _).
 
-running_timer(Tag, T)@next :-
-  running_timer(Tag, T),
-  notin rt:timer_fired(Tag, T),
-  notin rt:timer_cancelled(Tag, T).
-running_timer(election, T) :-
-  rt:timer_started(election, T).
+timer_duration(Tag, DurationMs) :-
+  Tag = election,
+  % TODO: make a request to runtime to get random number,
+  % between 150 and 300
+  DurationMs = 150.
+timer_duration(Tag, DurationMs) :-
+  Tag = append_entries,
+  DurationMs = 50.
+
+need_to_cancel_timer(election) :-
+  this_node(_NodeId, Term, candidate),
+  election_outcome(Term, _).
+
+%
+% end of timers code
+%
 
 
 
@@ -37,22 +46,38 @@ this_node(NodeId, Term, follower)@next :-
 
 this_node(NodeId, Term, candidate)@next :-
   notin higher_term_vote_request(_CandidateId, _Term),
-  rt:timer_fired(election, _),
+  timer_fired(election),
   this_node(NodeId, PrevTerm, follower),
   successor(PrevTerm, Term).
 
 this_node(NodeId, Term, follower)@next :-
   notin higher_term_vote_request(_CandidateId, _Term),
-  notin rt:timer_fired(election, _),
+  notin timer_fired(election),
   this_node(NodeId, Term, follower).
 
-% voted_for(NodeId) :-
-%   rt:timer_fired(election, _)
+this_node(NodeId, Term, leader)@next :-
+  notin higher_term_vote_request(_CandidateId, _Term),
+  election_outcome(Term, true),
+  this_node(NodeId, Term, candidate).
+
+this_node(NodeId, Term, follower)@next :-
+  notin higher_term_vote_request(_CandidateId, _Term),
+  election_outcome(Term, false),
+  this_node(NodeId, Term, candidate).
+
+this_node(NodeId, Term, follower)@next :-
+  % if didn't receive decisive number of votes
+  % and timer did run out, then become a follower
+  notin higher_term_vote_request(_CandidateId, _Term),
+  timer_fired(election),
+  this_node(NodeId, Term, candidate),
+  notin election_outcome(Term, _).
+
+
 
 % vote requests are sent immediately
 % on the next tick after getting status
 % of a candidate
-
 vote_requests_sent@next :- vote_requests_sent.
 vote_requests_sent@next :- this_node(NodeId, Term, candidate).
 
@@ -84,7 +109,7 @@ request_vote(#VoterAddr, CandidateId, CandidateTerm)@async :-
 % 2) If max term is higher than current term, then vote for it, transition to follower
 % 3) If max term is equal to current term, and current term is follower then vote if haven't voted before.
 % 4) Otherwise, reject vote.
-
+%
 % in case if election timer trigger event
 % arrived at the same tick with request_vote
 % we need to consider both options.
@@ -96,7 +121,7 @@ request_vote(VoterAddr, CandidateId, NextTerm) :-
   this_node(CandidateId, PrevTerm, follower),
   node(CandidateId, CandidateAddr),
   VoterAddr = CandidateAddr,
-  rt:timer_fired(election, _),
+  timer_fired(election),
   successor(PrevTerm, NextTerm).
 
 request_vote_max_term(max<CandidateTerm>) :-
@@ -105,13 +130,13 @@ request_vote_max_term(max<CandidateTerm>) :-
 
 
 % Only one among these three tuples must be present at the same time:
-failure:vote_request_choices_not_disjoint@async :-
+failure:vote_request_choices_are_not_disjoint(#supervisor)@async :-
   higher_term_vote_request(_, _),
   same_term_remote_vote_request(_, _).
-failure:vote_request_choices_not_disjoint@async :-
+failure:vote_request_choices_are_not_disjoint(#supervisor)@async :-
   higher_term_vote_request(_, _),
   same_term_self_vote_request(_, _).
-failure:vote_request_choices_not_disjoint@async :-
+failure:vote_request_choices_are_not_disjoint(#supervisor)@async :-
   same_term_self_vote_request(_, _),
   same_term_remote_vote_request(_, _).
 
@@ -166,7 +191,7 @@ voted_for(CandidateId, ElectionTerm)@next :-
 
 
 
-vote_response(#CandidateAddr, VoterId, VoterTerm, Decision)@async :-
+vote_response(#CandidateAddr, CandidateTerm, VoterId, VoterTerm, Decision)@async :-
   request_vote(_OurAddr, CandidateId, CandidateTerm),
   node(CandidateAddr, CandidateId),
   this_node(VoterId, VoterTerm, _State),
@@ -175,12 +200,61 @@ vote_response(#CandidateAddr, VoterId, VoterTerm, Decision)@async :-
   CandidateId =/= VoterId,
   voted_for(CandidateId, CandidateTerm),
   Decision = true.
-vote_response(#CandidateAddr, VoterId, VoterTerm, Decision)@async :-
+vote_response(#CandidateAddr, CandidateTerm, VoterId, VoterTerm, Decision)@async :-
   request_vote(_OurAddr, CandidateId, CandidateTerm),
   node(CandidateAddr, CandidateId),
   this_node(VoterId, _Term, _State),
   CandidateId =/= VoterId,
   notin voted_for(CandidateId, CandidateTerm),
   Decision = false.
-  
 
+
+
+total_voters(count<NodeId>) :-
+  node(NodeId, _Addr).
+required_for_quorum(RequiredVotes) :-
+  total_voters(TotalVoters),
+  % this relation is tricky, just like successor
+  % not always possible to compute
+  % need to be limited, in order to have bounded results
+  div(TotalVoters, 2, Quotient, _Remainder),
+  successor(Quotient, RequiredVotes).
+
+votes(CandidateTerm, VoterId, Decision) :-
+  % collect votes only if they are still relevant.
+  % it is still the same term and we're still a candidate
+  this_node(_NodeId, CandidateTerm, candidate),
+  vote_response(_OutAddr, CandidateTerm, VoterId, _VoterTerm, Decision).
+votes(CandidateTerm, VoterId, Decision)@next :-
+  this_node(_NodeId, CandidateTerm, candidate),
+  votes(CandidateTerm, VoterId, Decision).
+
+yes_vote_count(CandidateTerm, count<VoterId>) :-
+  votes(CandidateTerm, VoterId, Decision),
+  Decision = true.
+no_vote_count(CandidateTerm, count<VoterId>) :-
+  votes(CandidateTerm, VoterId, Decision),
+  Decision = false.
+
+% this fact is produced only when outcome of the election
+% was clearly determined 
+election_outcome(CandidateTerm, Winner) :-
+  yes_vote_count(CandidateTerm, YesCount),
+  required_for_quorum(RequiredVotes),
+  RequiredVotes =< YesCount,
+  Winner = true.
+election_outcome(CandidateTerm, Winner) :-
+  no_vote_count(CandidateTerm, NoCount),
+  required_for_quorum(RequiredVotes),
+  RequiredVotes =< NoCount,
+  Winner = false.
+
+% we need to send AppendEntries if node just become a leader
+need_to_send_append_entries :-
+  this_node(_NodeId, _Term, leader),
+  notin running_timer(append_entries, _).
+
+% rt:start_timer(#timers, TimeoutMs, append_entries, T)@async :-
+%   TimeoutMs = 50,
+%   this_node(_NodeId, _Term, leader)@T,
+%   notin running_timer(append_entries, _).
