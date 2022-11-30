@@ -1,7 +1,13 @@
+module(timers).
+
 %
 % helper rules to work with #timers
 % it is still possible to work with stdlib API directly.
 %
+
+% TODO: write invariants, that must be always true
+% failure: ... ()
+
 
 used_timer_id(Tag, N) :- rt:timer_started(Tag, N).
 used_timer_id(Tag, N) :- rt:timer_cancelled(Tag, N).
@@ -55,6 +61,9 @@ running_timer(Tag, T)@next :-
 running_timer(Tag, N) :-
   rt:timer_started(Tag, N).
 
+timers:running_timer(Tag) :-
+  running_timer(Tag, _).
+
 rt:cancel_timer(#timers, Tag, T)@async :-
   need_to_cancel_timer(Tag).
 
@@ -65,14 +74,14 @@ cancelled_timer(Tag, N)@next :-
   cancelled_timer(Tag, N),
   % how long we need to remember that timer is cancelled
   % and that its firing is not valid?
-  % Until new timer for same tag is started.
+  % Until new timer for the same tag is started.
   notin setting_up_timer(Tag, _).
 
 
 
 % Use this rule to learn that timer
 % that was not cancelled before just fired
-timer_fired(Tag) :-
+timers:timer_fired(Tag) :-
   rt:timer_fired(Tag, N),
   notin cancelled_timer(Tag, N).
 
@@ -83,16 +92,16 @@ timer_fired(Tag) :-
 % User needs to define following deductive rules
 % for Tag of his choosing:
 %
-% need_to_start_timer(Tag)
+% timers:need_to_start_timer(Tag)@next
 %   Once this fact is produced, Timer request is sent.
 %
-% timer_duration(Tag, DurationMs)
+% timers:timer_duration(Tag, DurationMs)@next
 %   This fact must be present
 %   together with need_to_start_timer(Tag)
 %   in order for timer to start
 %
 % Optional:
-% need_to_cancel_timer(Tag)
+% timers:need_to_cancel_timer(Tag)@next
 %   Once produced, any currently starting or already running timer
 %   will be cancelled.
 %

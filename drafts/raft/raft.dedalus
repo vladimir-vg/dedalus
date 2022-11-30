@@ -1,3 +1,5 @@
+module(raft).
+
 node(0, "/ip4/127.0.0.1/udp/5000")@0.
 node(1, "/ip4/127.0.0.1/udp/5001")@0.
 node(2, "/ip4/127.0.0.1/udp/5002")@0.
@@ -14,25 +16,32 @@ this_node(4, 0, follower)@0.
 % Domain specific rules for timers:
 %
 
-need_to_start_timer(election) :-
-  this_node(_NodeId, _Term, follower),
-  notin running_timer(election, _).
-need_to_start_timer(election) :-
-  this_node(_NodeId, _Term, candidate),
-  notin running_timer(election, _).
-
-timer_duration(Tag, DurationMs) :-
+timers:timer_duration(Tag, DurationMs)@next :-
   Tag = election,
   % TODO: make a request to runtime to get random number,
   % between 150 and 300
   DurationMs = 150.
-timer_duration(Tag, DurationMs) :-
+
+timers:need_to_start_timer(election)@next :-
+  this_node(_NodeId, _Term, follower),
+  notin timers:running_timer(election).
+timers:need_to_start_timer(election)@next :-
+  this_node(_NodeId, _Term, candidate),
+  notin timers:running_timer(election).
+
+timers:need_to_cancel_timer(election)@next :-
+  this_node(_NodeId, Term, candidate),
+  election_outcome(Term, _).
+
+
+
+timers:timer_duration(Tag, DurationMs)@next :-
   Tag = append_entries,
   DurationMs = 50.
 
-need_to_cancel_timer(election) :-
-  this_node(_NodeId, Term, candidate),
-  election_outcome(Term, _).
+timers:need_to_start_timer(append_entries)@next :-
+  this_node(_NodeId, _Term, leader),
+  notin timers:running_timer(append_entries).
 
 %
 % end of timers code
@@ -46,13 +55,13 @@ this_node(NodeId, Term, follower)@next :-
 
 this_node(NodeId, Term, candidate)@next :-
   notin higher_term_vote_request(_CandidateId, _Term),
-  timer_fired(election),
+  timers:timer_fired(election),
   this_node(NodeId, PrevTerm, follower),
   successor(PrevTerm, Term).
 
 this_node(NodeId, Term, follower)@next :-
   notin higher_term_vote_request(_CandidateId, _Term),
-  notin timer_fired(election),
+  notin timers:timer_fired(election),
   this_node(NodeId, Term, follower).
 
 this_node(NodeId, Term, leader)@next :-
@@ -69,7 +78,7 @@ this_node(NodeId, Term, follower)@next :-
   % if didn't receive decisive number of votes
   % and timer did run out, then become a follower
   notin higher_term_vote_request(_CandidateId, _Term),
-  timer_fired(election),
+  timers:timer_fired(election),
   this_node(NodeId, Term, candidate),
   notin election_outcome(Term, _).
 
@@ -121,7 +130,7 @@ request_vote(VoterAddr, CandidateId, NextTerm) :-
   this_node(CandidateId, PrevTerm, follower),
   node(CandidateId, CandidateAddr),
   VoterAddr = CandidateAddr,
-  timer_fired(election),
+  timers:timer_fired(election),
   successor(PrevTerm, NextTerm).
 
 request_vote_max_term(max<CandidateTerm>) :-
@@ -248,13 +257,3 @@ election_outcome(CandidateTerm, Winner) :-
   required_for_quorum(RequiredVotes),
   RequiredVotes =< NoCount,
   Winner = false.
-
-% we need to send AppendEntries if node just become a leader
-need_to_send_append_entries :-
-  this_node(_NodeId, _Term, leader),
-  notin running_timer(append_entries, _).
-
-% rt:start_timer(#timers, TimeoutMs, append_entries, T)@async :-
-%   TimeoutMs = 50,
-%   this_node(_NodeId, _Term, leader)@T,
-%   notin running_timer(append_entries, _).
